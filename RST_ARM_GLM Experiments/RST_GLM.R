@@ -125,6 +125,7 @@ summary(kariki_ML_models_2) # From the summary of the model
 ## In relation to rain
 #' When the pressure is low, the air is free to rise into the atmosphere where it cools and condenses. ...
 #'  Eventually the water vapor in the clouds condenses and falls as rain.
+<<<<<<< HEAD
 
 # How can I improve on the above model?? On 12/11/2021 I saw that using the RST discretization methods
 # of global discernibility wasnt giving good values......
@@ -148,3 +149,5 @@ kariki_QR<- SF.applyDecTable(kariki_DT, kariki.rst)
 Reduct_GHR <-  FS.greedy.heuristic.reduct.RST(kariki_DT, qualityF = X.entropy,epsilon = 0.0)
 
   
+=======
+>>>>>>> a947311ffd72e82db6a36fdb244a6f66d3c74f4c
