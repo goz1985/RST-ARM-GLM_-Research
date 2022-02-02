@@ -108,6 +108,7 @@ kariki_IND <- BC.IND.relation.RST(kariki_Table_Discretized)
 roughset <- BC.LU.approximation.RST(kariki_Table_Discretized,kariki_IND)
 
 # Use the discernibility matrix, a reduct is generated with 3 attributes remaining that is windspeed avg, precipitation amount and high pressure
+# Funny that the High.Hpa is discerned as a key attribute in relation to rain
 regions.rst <- BC.positive.reg.RST(kariki_Table_Discretized,roughset)
 disc.mat <- BC.discernibility.mat.RST(kariki_Table_Discretized)
 reduct <- FS.all.reducts.computation(disc.mat)
@@ -120,3 +121,30 @@ prediction_formula_2 <- as.formula(paste("Rain", paste(predictor_rain_2, collaps
 kariki_ML_models_2 <- train(prediction_formula_2,data = new.decTable,method = "glm",family="binomial", trControl = trControl, metric = 'Accuracy',maxit = 100)
 kariki_ML_models_2$results$Accuracy
 summary(kariki_ML_models_2) # From the summary of the model
+
+## In relation to rain
+#' When the pressure is low, the air is free to rise into the atmosphere where it cools and condenses. ...
+#'  Eventually the water vapor in the clouds condenses and falls as rain.
+
+# How can I improve on the above model?? On 12/11/2021 I saw that using the RST discretization methods
+# of global discernibility wasnt giving good values......
+
+# Generate Rules using both ARM and RST methods and then compare the rules interms of confidence and support
+
+# Using The quick reduct method to generate a reduct and compare the attributes with the one with all reduct computation
+kariki_shuffled <- kariki_farm2[sample(nrow(kariki_farm2)),]
+kariki_DT <- SF.asDecisionTable(kariki_shuffled, decision.attr = 16, indx.nominal = 16)
+kariki_DT_cutValues <- D.discretization.RST(kariki_DT, type.method = "local.discernibility")
+kariki_Table_Discretized <- SF.applyDecTable(kariki_DT,kariki_DT_cutValues)
+
+# Feature selection. This reduct using Quick reduct generates 6 attributes which are discernable and have an ultimate effect on the decision variable rain
+# The attributes are: Avg_temp, DewPoint_Avg,Dewpoint_Low,Windspeed_Avg,Precipitation_Amount
+
+kariki.rst <- FS.feature.subset.computation(kariki_Table_Discretized,method="quickreduct.rst")
+kariki_QR<- SF.applyDecTable(kariki_DT, kariki.rst)
+
+#Reduct generation using greedy-heursitic method
+# COde aborts.
+Reduct_GHR <-  FS.greedy.heuristic.reduct.RST(kariki_DT, qualityF = X.entropy,epsilon = 0.0)
+
+  
