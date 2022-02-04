@@ -146,8 +146,5 @@ kariki_QR<- SF.applyDecTable(kariki_DT, kariki.rst)
 
 #Reduct generation using greedy-heursitic method
 # COde aborts.
-Reduct_GHR <-  FS.greedy.heuristic.reduct.RST(kariki_DT, qualityF = X.entropy,epsilon = 0.0)
-
-  
-=======
->>>>>>> a947311ffd72e82db6a36fdb244a6f66d3c74f4c
+GHR_RST <-  FS.greedy.heuristic.reduct.RST(kariki_DT, qualityF = X.entropy,epsilon = 0.0)
+GHR_Reduct <- SF.applyDecTable(kariki_DT,GHR_RST)
