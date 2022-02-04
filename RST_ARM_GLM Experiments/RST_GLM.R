@@ -145,6 +145,9 @@ kariki.rst <- FS.feature.subset.computation(kariki_Table_Discretized,method="qui
 kariki_QR<- SF.applyDecTable(kariki_DT, kariki.rst)
 
 #Reduct generation using greedy-heursitic method
-# COde aborts.
+# Code aborts by bringing an abornomal end to the R session.
+# Had proposed using the greedy heuristic method...will have to compare it versus the quick reduct method interms of the attributes it selects( interacting features)
 GHR_RST <-  FS.greedy.heuristic.reduct.RST(kariki_DT, qualityF = X.entropy,epsilon = 0.0)
 GHR_Reduct <- SF.applyDecTable(kariki_DT,GHR_RST)
+                      
+ # After getting the reduct for the greedy heuristic will model it on the GLM model and test it against the previous one for the quick glm model using the quick reduct method.
