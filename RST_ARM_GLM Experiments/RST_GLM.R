@@ -14,7 +14,7 @@ library(ROCR)
 library(corrplot)
 library(dplyr)
 library(RoughSets)
-kariki_farm <- read.csv("E:/Datasets/Research datasets/Weather data/Kariki_Farm.csv")
+kariki_farm <- read.csv("C:/Users/admin/Desktop/datasets/Kariki_Farm.csv")
 
 # Preprocessing
 
@@ -125,7 +125,7 @@ summary(kariki_ML_models_2) # From the summary of the model
 ## In relation to rain
 #' When the pressure is low, the air is free to rise into the atmosphere where it cools and condenses. ...
 #'  Eventually the water vapor in the clouds condenses and falls as rain.
-<<<<<<< HEAD
+
 
 # How can I improve on the above model?? On 12/11/2021 I saw that using the RST discretization methods
 # of global discernibility wasnt giving good values......
@@ -145,6 +145,7 @@ kariki.rst <- FS.feature.subset.computation(kariki_Table_Discretized,method="qui
 kariki_QR<- SF.applyDecTable(kariki_DT, kariki.rst)
 
 #Reduct generation using greedy-heursitic method
-# COde aborts.
-GHR_RST <-  FS.greedy.heuristic.reduct.RST(kariki_DT, qualityF = X.entropy,epsilon = 0.0)
+# COde aborts:.....Was doing it the wrong way, the table i used was the one which was discretized..Have to discretize it firts before I forumulate the reduct with greedy heuristic
+# This reduct also has the same attributes as the Quick Reduct method
+GHR_RST <-  FS.greedy.heuristic.reduct.RST(kariki_Table_Discretized, qualityF = X.entropy,epsilon = 0.0)
 GHR_Reduct <- SF.applyDecTable(kariki_DT,GHR_RST)
