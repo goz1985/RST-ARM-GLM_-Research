@@ -21,6 +21,7 @@ kariki_farm <- read.csv("C:/Users/admin/Desktop/datasets/Kariki_Farm.csv")
 (n<-nrow(kariki_farm)) # Checking number of rows in the data which is 1179
 c(as.character(kariki_farm$Date[1]), as.character(kariki_farm$Date[n])) # the date range from 2/3/2018 to 20/5/2021
 head(kariki_farm$Rain.Yes.No.)
+kariki_farm$Rain <- factor(kariki_farm$Rain, labels = c("No","Yes"))
 kariki_farm$Rain <- factor(kariki_farm$Rain) # Rain Yes/No to factor
 kariki_farm$Date <- as.Date(kariki_farm$Date, '%m/%d/%Y') # Date column to date
 str(kariki_farm)# When looking at the high and low numeric pressure, I had to convert them to numeric because they were being considered as being factors yet theyr weren't
@@ -99,18 +100,49 @@ summary(kariki_ML_models_3)
 ########### Roughset##########
 # First shuffle then discretize the values
 kariki_shuffled <- kariki_farm2[sample(nrow(kariki_farm2)),]
-kariki_DT <- SF.asDecisionTable(kariki_shuffled, decision.attr = 16, indx.nominal = 16)
+kariki_DT <- SF.asDecisionTable(kariki_shuffled, decision.attr = 16, indx.nominal = c(1:13)) # Indx.nominal is picking conditional attributes
 kariki_DT_cutValues <- D.discretization.RST(kariki_DT, type.method = "global.discernibility")
+
+#kariki_DT_cutValues <- D.discretization.RST(kariki_DT, type.method = "unsupervised.quantiles")# use this method if global and local discretization refuse
+
 kariki_Table_Discretized <- SF.applyDecTable(kariki_DT,kariki_DT_cutValues)
 
 # Then an indiscernibility relation is deduced inorder to get the attributes that are indiscernable
 kariki_IND <- BC.IND.relation.RST(kariki_Table_Discretized)
+Kariki_IND2 <- BC.IND.relation.RST(kariki_DT, feature.set =c(1:13))
+print(Kariki_IND2)
 roughset <- BC.LU.approximation.RST(kariki_Table_Discretized,kariki_IND)
+
+### video from youtube on how to do the indiscernibility relation#################
+roughset_2 <- BC.LU.approximation.RST(kariki_Table_Discretized,Kariki_IND2)
+low_app_yes <- roughset_2$lower.approximation$Yes
+upp_app_yes <- roughset_2$upper.approximation$Yes
+boundary_app <- setdiff(upp_app_yes,low_app_yes)
+
+
+Uni_discourse <- c(1:nrow(kariki_DT))
+outer_region = setdiff(Uni_discourse,upp_app_yes)
+
+print(outer_region)
+print(low_app_yes)
+print(roughset_2)
+print(boundary_app)
+
+regions.rst_2 <- BC.positive.reg.RST(kariki_DT,roughset_2)
+disc.mat_2 <- BC.discernibility.mat.RST(kariki_DT)
+reduct_2 <- FS.all.reducts.computation(disc.mat_2)
+new.decTable_2 <- SF.applyDecTable(kariki_DT, reduct_2, control = list(indx.reduct = 1))
+
+
+##########################################################################################################################
+
+
+
 
 # Use the discernibility matrix, a reduct is generated with 3 attributes remaining that is windspeed avg, precipitation amount and high pressure
 # Funny that the High.Hpa is discerned as a key attribute in relation to rain
-regions.rst <- BC.positive.reg.RST(kariki_Table_Discretized,roughset)
-disc.mat <- BC.discernibility.mat.RST(kariki_Table_Discretized)
+regions.rst <- BC.positive.reg.RST(kariki_DT,roughset)
+disc.mat <- BC.discernibility.mat.RST(kariki_DT)
 reduct <- FS.all.reducts.computation(disc.mat)
 new.decTable <- SF.applyDecTable(kariki_Table_Discretized, reduct, control = list(indx.reduct = 1))
 
