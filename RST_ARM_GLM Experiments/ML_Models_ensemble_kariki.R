@@ -41,7 +41,7 @@ kariki_train <- createDataPartition(kariki_farm2$Rain, p =0.75, list = FALSE)
 training <- kariki_farm2[kariki_train,]
 testing <- kariki_farm2[-kariki_train,]
 
-#Ensemble Models############### Tree Bag and RF
+#Ensemble Models############### Tree Bag and RF#### Bagging
 control <- trainControl(method="repeatedcv", number=10, repeats=3,
                         savePredictions=TRUE, classProbs=TRUE,preProc = c("center","scale"))
 
@@ -69,7 +69,7 @@ bagging_results <- resamples(list(treebag=fit.treebag, rf=fit.rf))
 summary(bagging_results)
 dotplot(bagging_results)
 
-#Comparing the predictions using ROC curve
+#Comparing the predictions using ROC curve..This part has an issue to show the ROC curve
 
 pred_bag <- list(prediction_raw_Tbag,prediction_raw_RF)
 pred_bag_predictions_treebag<-predict(object=fit.treebag ,testing, type="raw")
@@ -82,3 +82,16 @@ pred_bag <- data.frame(pred_bag)
 
 caTools::colAUC(prediction_raw_Tbag,prediction_raw_RF, testing$Rain, plotROC = TRUE)
 
+
+
+
+###Boosting models#####
+
+
+# Employing the GLM model on the data
+trControl <- trainControl(method = "repeatedcv",  repeats = 5, number = 10, verboseIter = FALSE)
+predictor_rain <-c("High_Temp","Avg_Temp","Low_Temp","Dewpoint_High","Dewpoint_Avg","Dewpoint_low","Humidity_High","Humidity_Avg","Humidity_Low","Windspeed_High","Windspeed_Avg")
+prediction_formula <- as.formula(paste("Rain", paste(predictor_rain, collapse="+"), sep="~"))
+kariki_ML_models <- train(prediction_formula,data = training,method = "glm",family="binomial", trControl = trControl, metric = 'Accuracy',maxit = 100)
+kariki_ML_models$results$Accuracy
+summary(kariki_ML_models) # From the summary of the model
