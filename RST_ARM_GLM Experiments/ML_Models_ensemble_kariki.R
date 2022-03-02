@@ -11,9 +11,11 @@ library(dplyr)
 library(RoughSets)
 library(caretEnsemble)
 library(fastAdaboost)
-kariki_farm <- read.csv("C:/Users/admin/Desktop/datasets/Kariki_Farm.csv")
+kariki_farm <- read.csv("E:/Datasets/Research datasets/Weather data/Kariki_Farm.csv")
 
-#
+#Loading the datasets, preprocessing. The dataset has missing values, for now I just choose to reove all rows with missing values
+#Next I should choose an imputation method to see whether I can impute the missing values.
+
 (n<-nrow(kariki_farm)) # Checking number of rows in the data which is 1179
 c(as.character(kariki_farm$Date[1]), as.character(kariki_farm$Date[n])) # the date range from 2/3/2018 to 20/5/2021
 head(kariki_farm$Rain.Yes.No.)
@@ -26,7 +28,7 @@ str(kariki_farm)
 view(kariki_farm)
 (cols_withNa <- apply(kariki_farm, 2, function(x) sum(is.na(x))))
 
-######## Picking only complete values, I create another data frame kariki_farm2################
+######## Picking only complete values, I create another data frame kariki_farm2################I removed missing value rows in the dataset
 kariki_farm2 <- kariki_farm[complete.cases(kariki_farm),]
 str(kariki_farm2)
 (cols_withNa <- apply(kariki_farm2, 2, function(x) sum(is.na(x))))
@@ -41,7 +43,7 @@ kariki_train <- createDataPartition(kariki_farm2$Rain, p =0.75, list = FALSE)
 training <- kariki_farm2[kariki_train,]
 testing <- kariki_farm2[-kariki_train,]
 
-#Ensemble Models############### Tree Bag and RF#### Bagging
+#Ensemble Models############### Tree Bag and RF (Random Forest)#### Bagging
 control <- trainControl(method="repeatedcv", number=10, repeats=3,
                         savePredictions=TRUE, classProbs=TRUE,preProc = c("center","scale"))
 
@@ -86,9 +88,29 @@ caTools::colAUC(prediction_raw_Tbag,prediction_raw_RF, testing$Rain, plotROC = T
 
 
 ###Boosting models#####
+library(gbm)
+set.seed(123)
+kariki_gbm_fit <- gbm(Rain ~ .,data = training,n.trees = 10000,interaction.depth = 1,shrinkage = 0.001,distribution = "adaboost",cv.folds = 5,n.cores = NULL, verbose = FALSE)  
+
+# With a a different distribution of bernouli or gaussian( square error) because rain is factor
+# For bernoulli, it had an error using trees
+kariki_gbm_fit_3 <- gbm(Rain ~ .,data = training,n.trees = 10000,interaction.depth = 1,shrinkage = 0.001,distribution = "gaussian",cv.folds = 5,n.cores = NULL, verbose = FALSE)  
+
+print(kariki_gbm_fit)
+# MSE and RMSE
+sqrt(min(kariki_gbm_fit$cv.error))
+sqrt(min(kariki_gbm_fit_3$cv.error))
+
+#Plotting the loss function
+gbm.perf(kariki_gbm_fit, method = "cv")
+gbm.perf(kariki_gbm_fit_3, method = "cv")
+
+# Tuning the model even further by reducing the no of trees abd the depth
+kariki_gbm_fit_2 <- gbm(Rain ~ .,data = training,n.trees = 5000,interaction.depth = 3,shrinkage = 0.1,distribution = "adaboost",cv.folds = 5,n.cores = NULL, verbose = FALSE)  
 
 
-# Employing the GLM model on the data
+
+########## Employing the GLM model on the data
 trControl <- trainControl(method = "repeatedcv",  repeats = 5, number = 10, verboseIter = FALSE)
 predictor_rain <-c("High_Temp","Avg_Temp","Low_Temp","Dewpoint_High","Dewpoint_Avg","Dewpoint_low","Humidity_High","Humidity_Avg","Humidity_Low","Windspeed_High","Windspeed_Avg")
 prediction_formula <- as.formula(paste("Rain", paste(predictor_rain, collapse="+"), sep="~"))
