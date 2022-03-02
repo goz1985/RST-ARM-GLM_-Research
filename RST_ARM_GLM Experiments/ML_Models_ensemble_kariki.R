@@ -99,7 +99,7 @@ kariki_gbm_fit_3 <- gbm(Rain ~ .,data = training,n.trees = 10000,interaction.dep
 print(kariki_gbm_fit)
 # MSE and RMSE
 sqrt(min(kariki_gbm_fit$cv.error))
-sqrt(min(kariki_gbm_fit_3$cv.error))
+sqrt(min(kariki_gbm_fit_3$cv.error)) # had an mse of 0.03
 
 #Plotting the loss function
 gbm.perf(kariki_gbm_fit, method = "cv")
@@ -117,3 +117,54 @@ prediction_formula <- as.formula(paste("Rain", paste(predictor_rain, collapse="+
 kariki_ML_models <- train(prediction_formula,data = training,method = "glm",family="binomial", trControl = trControl, metric = 'Accuracy',maxit = 100)
 kariki_ML_models$results$Accuracy
 summary(kariki_ML_models) # From the summary of the model
+
+
+#########Using Roughsets#########################
+kariki_shuffled <- kariki_farm2[sample(nrow(kariki_farm2)),]
+# I set the indx.nominal between 1:15 and all the discretization methods but when set to between 1:13 it worked..
+# Error message is "All the conditional attributes are already nominal."
+kariki_DT <- SF.asDecisionTable(kariki_shuffled, decision.attr = 16, indx.nominal = c(1:13))
+
+kariki_DT_cutValues_2 <- D.discretization.RST(kariki_DT, type.method = "local.discernibility") # Method refused due to the date attribute hence used the unsupervised quantiles
+kariki_DT_cutValues <- D.discretization.RST(kariki_DT, type.method = "unsupervised.discernibility")# Testing both methods
+
+# Deducing the new discretized tables
+
+kariki_Table_Discretized <- SF.applyDecTable(kariki_DT,kariki_DT_cutValues)
+kariki_Table_Discretized_2 <- SF.applyDecTable(kariki_DT,kariki_DT_cutValues_2)
+
+# Indiscernibility relations. Compute them from decision tables. WIll choose a different approach
+# First compute a decision reduct...approximate reducts which contain a subset of features
+Comp_reduct_1 <- FS.reduct.computation(kariki_Table_Discretized) # attributes are High_temp, Dew_point_Avg and Windspeed_Avg
+Comp_reduct_2 <- FS.reduct.computation(kariki_Table_Discretized_2) # attributes are High_temp, Dewpoint_High,Precipitation_amount
+
+Com
+
+IND_RELATION_1 <- BC.IND.relation.RST(kariki_Table_Discretized,feature.set = Comp_reduct_1)
+IND_RELATION_2 <- BC.IND.relation.RST(kariki_Table_Discretized,feature.set = Comp_reduct_2)
+
+IND_R_1 <- BC.IND.relation.RST(kariki_DT,feature.set = Comp_reduct_1)
+IND_R_2 <- BC.IND.relation.RST(kariki_DT,feature.set = Comp_reduct_2)# Issues not generating idiscernibility relation till the DT is discretized.
+
+# Getting the roughset for the above indiscernibility relations
+
+roughset_1 <- BC.LU.approximation.RST(kariki_Table_Discretized,IND_RELATION_1)
+roughset_2 <- BC.LU.approximation.RST(kariki_Table_Discretized_2,IND_RELATION_2)
+
+# THis aspect isnt returning the indiscernible objects very clearly..still more work to do here.
+
+######Discernibility matrix computation
+disc.mat<- BC.discernibility.mat.RST(kariki_DT, range.object = NULL)
+disc.mat_1<- BC.discernibility.mat.RST(kariki_Table_Discretized, range.object = NULL)
+disc.mat_2<- BC.discernibility.mat.RST(kariki_Table_Discretized_2, range.object = NULL)
+
+
+#Reduct computation and formulation, Have to research more because am getting very many reducts upto 366
+
+reduct <- FS.all.reducts.computation(disc.mat) #Time consuming..or either my machine resources are low
+reduct_1 <- FS.all.reducts.computation(disc.mat_1)
+reduct_2 <- FS.all.reducts.computation(disc.mat_2)
+
+reduct_table_1 <- SF.applyDecTable(kariki_DT, reduct_1, control = list(indx.reduct = 1))
+
+reduct_table_2 <- SF.applyDecTable(kariki_DT, reduct_2, control = list(indx.reduct = 30))
