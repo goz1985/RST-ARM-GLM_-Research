@@ -14,7 +14,7 @@ library(ROCR)
 library(corrplot)
 library(dplyr)
 library(RoughSets)
-kariki_farm <- read.csv("C:/Users/admin/Desktop/datasets/Kariki_Farm.csv")
+kariki_farm <- read.csv("E:/Datasets/Research datasets/Weather data/Kariki_Farm.csv")
 
 # Preprocessing
 
