@@ -7,5 +7,9 @@ The reserach starts off with laoding of the datasets and preprocessing them to e
 Preprocessing was the main hurdle in this research especially the kirogo datasets which had 30min interval weather reading.
 The structure of the datasets are as follows:
 Kirogo attributes were: Date/Time;RH(%),Temp(Degrees celcius), Rainfall
+Kariki attributes: Date, Min Temp,Avg Temp, Max Temp, Min humidiy, Max humidity, Avg humidity, windspeed, precipitation amount and rain factor.
 
-Next I run sample machine learning models on the dataset to get insights on the data, this is important as it will form the basis for comparing my proposed model performance the standard machine learning models i will have choosen for the study
+
+Next I run sample machine learning models on the dataset to get insights on the data, this is important as it will form the basis for comparing my proposed model performance the standard machine learning models i will have choosen for the study.
+
+The project starts with preprocessing, followed by getting the required features for modelling on the data via the RoughSet feature selection method using greedy heuristic method. Feature selection is key in machine learning interpretability because through it only important features will be selected and this makes interpretability abit more easier. Secondly more interpretability will be provided for in the decision ruels section
