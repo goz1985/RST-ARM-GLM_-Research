@@ -139,6 +139,7 @@ kariki_trans_GH<-as(GH_Table_Frame,"transactions")
 itemLabels(kariki_trans_GH)
 image(kariki_trans_GH)
 
+
 #Generating the rule susing apriori method, will generate only two rules, need to fine tune in step 149 to get more rules
 kariki_rules <- apriori(kariki_trans_GH)
 
@@ -160,6 +161,11 @@ view(rules_df)
 GH_Table_Frame$Precipitation_amount<-NULL
 
 # BAsically the reduct couldnt formulate rules..
+
+#Generating the rule susing apriori method
+kariki_rules <- apriori(kariki_trans_GH)
+
+
 
 
 
