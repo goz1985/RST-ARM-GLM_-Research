@@ -1,5 +1,5 @@
 library(RoughSets)
-kariki_farm <- read.csv("E:/Datasets/Research datasets/Weather data/Kariki_Farm.csv")
+kariki_farm <- read.csv("D:/datasets/Kariki_Farm1.csv", stringsAsFactors = FALSE, fileEncoding="latin1")
 c(as.character(kariki_farm$Date[1]), as.character(kariki_farm$Date[n]))
 kariki_farm$Rain <- factor(kariki_farm$Rain)
 kariki_farm$Date <- as.Date(kariki_farm$Date, '%m/%d/%Y')

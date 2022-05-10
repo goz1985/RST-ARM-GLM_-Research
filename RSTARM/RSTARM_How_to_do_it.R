@@ -12,13 +12,22 @@ IND <- BC.IND.relation.RST(decision.table, feature.set = attr)
 roughset <- BC.LU.approximation.RST(decision.table, IND)
 region.RST <- BC.positive.reg.RST(decision.table, roughset)
 disc.mat <- BC.discernibility.mat.RST(decision.table, range.object = NULL)
-decision_table_hiring <- FS.all.reducts.computation(disc.mat)
 
+decision_table_hiring <- FS.all.reducts.computation(disc.mat)
 # From the above reduct computation we get two Reduct each having different attributes in the tables
 # Table one the attributes are : "Diploma", "Experience, "Decision"
 # Table two the attributes are : "Experience", "Reference", "Decision"
 new_hiring_table1 <- SF.applyDecTable(decision.table,decision_table_hiring,control = list(indx.reduct = 1))
 new_hiring_table2 <- SF.applyDecTable(decision.table,decision_table_hiring,control = list(indx.reduct = 2))
+
+# Using the greedy heuristic method to generate reduct
+# Setting the epsilon value to rep an approximate threashold..Compute approximate reducts or not
+decision_hiring <- FS.greedy.heuristic.reduct.RST(decision.table,qualityF = X.entropy,epsilon = 0.9)
+Hiring_table <- SF.applyDecTable(decision.table,decision_hiring)
+
+
+
+
 
 # Loading the association rule mining package for formulating the decision rules for the above dataset.
 

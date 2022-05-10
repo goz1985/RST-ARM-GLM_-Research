@@ -11,7 +11,7 @@ library(dplyr)
 library(RoughSets)
 library(caretEnsemble)
 library(fastAdaboost)
-kariki_farm <- read.csv("E:/Datasets/Research datasets/Weather data/Kariki_Farm.csv")
+kariki_farm <- read.csv("D:/datasets/Kariki_Farm1.csv", stringsAsFactors = FALSE, fileEncoding="latin1")
 
 #Loading the datasets, preprocessing. The dataset has missing values, for now I just choose to reove all rows with missing values
 #Next I should choose an imputation method to see whether I can impute the missing values.

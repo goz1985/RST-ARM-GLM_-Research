@@ -10,7 +10,7 @@ library(RoughSets)
 library(RoughSetKnowledgeReduction)
 
 #Loading the dataset and preprocessing it
-kariki_farm <- read.csv("E:/Datasets/Research datasets/Weather data/Kariki_Farm.csv")
+kariki_farm <- read.csv("D:/datasets/Kariki_Farm1.csv", stringsAsFactors = FALSE, fileEncoding="latin1")
 (n<-nrow(kariki_farm)) # Checking number of rows in the data which is 1179
 c(as.character(kariki_farm$Date[1]), as.character(kariki_farm$Date[n])) # the date range from 2/3/2018 to 20/5/2021
 head(kariki_farm$Rain.Yes.No.)
