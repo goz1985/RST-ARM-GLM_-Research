@@ -87,6 +87,12 @@ kariki_ML_models <- train(prediction_formula,data = kariki_farm2,method = "glm",
 kariki_ML_models$results$Accuracy
 summary(kariki_ML_models) # From the summary of the model
 
+glm_responses <- predict(kariki_ML_models,testing,type = "raw")
+table(glm_responses)
+confusionMatrix(glm_responses,testing$Rain)
+
+
+
 # Used the adaboost and decision tree model..install the packages first for the adaboost model
 
 kariki_ML_models_2 <- train(prediction_formula,data = kariki_farm2,method = "adaboost",trControl = trControl, metric = 'Accuracy',maxit = 100)

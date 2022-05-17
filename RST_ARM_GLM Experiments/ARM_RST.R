@@ -10,11 +10,12 @@ library(RoughSets)
 library(RoughSetKnowledgeReduction)
 
 #Loading the dataset and preprocessing it
-kariki_farm <- read.csv("E:/Datasets/Research datasets/Weather data/Kariki_Farm.csv")
-(n<-nrow(kariki_farm)) # Checking number of rows in the data which is 1179
+kariki_farm <- read.csv("E:/Datasets/Kariki_Farm.csv")
+(n<-nrow(kariki_farm)) # Checking number of rows in the data which is 1441
 c(as.character(kariki_farm$Date[1]), as.character(kariki_farm$Date[n])) # the date range from 2/3/2018 to 20/5/2021
 head(kariki_farm$Rain.Yes.No.)
-kariki_farm$Rain <- factor(kariki_farm$Rain, labels = c("No","Yes"))# Rain Yes/No to factor
+kariki_farm$Rain <- factor(kariki_farm$Rain)
+
 kariki_farm$Date <- as.Date(kariki_farm$Date, '%m/%d/%Y') # Date column to date
 str(kariki_farm)# When looking at the high and low numeric pressure, I had to convert them to numeric because they were being considered as being factors yet theyr weren't
 
@@ -49,6 +50,7 @@ kariki_imputed_complete <- complete(kariki_imputed)
 kariki_farm2 <- kariki_farm[complete.cases(kariki_farm),]
 str(kariki_farm2)
 (cols_withNa <- apply(kariki_farm2, 2, function(x) sum(is.na(x))))
+kariki_farm2$Rain <- factor(kariki_farm2$Rain, labels = c("No","Yes"))# Rain Yes/No to factor
 kariki_farm2$Date <- NULL # removing the date column
 #Remove windspeed as it doesnt add any value to our research
 kariki_farm2$Windspeed_low <-NULL
@@ -80,8 +82,16 @@ kariki.regions <- BC.positive.reg.RST(kariki_DT,kariki_roughset)
 # Discernibility matrix formulation
 kariki.matrix <- BC.discernibility.mat.RST(kariki_DT)
 
+#Reduct formulation using the all reduct computation and second using the greedy heuristic method
+
 # Reduct formulation using
-#' 1 Greedy heuristic
+
+# 1. All reduct formulation method
+
+kariki_weather <- FS.all.reducts.computation(kariki.matrix) # A total of 483 reducts are generated which aint feasible.
+# From the above we see it aint an optimal method as it calculates all decision reduct even if they arent optimal
+
+#' 2 Greedy heuristic
 GH_Kariki_reduct <- FS.greedy.heuristic.reduct.RST(kariki_DT,qualityF = X.entropy,epsilon = 0.0)
 GH_Table <- SF.applyDecTable(kariki_DT,GH_Kariki_reduct)
 # With this method we get a reduct made up of 4 variables: High_temp, Dew_point, Precipitation amount and Rain
