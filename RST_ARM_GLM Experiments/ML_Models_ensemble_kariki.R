@@ -39,7 +39,7 @@ view(kariki_farm2)
 
 ############################Now applying several machine learning models on the data to see what it will output
 set.seed(123)
-kariki_train <- createDataPartition(kariki_farm2, p =0.75, list = FALSE)
+kariki_train <- createDataPartition(kariki_farm2$Rain, p =0.75, list = FALSE)
 training <- kariki_farm2[kariki_train,]
 testing <- kariki_farm2[-kariki_train,]
 
@@ -104,13 +104,17 @@ res <- evalm(list(fit.treebag,fit.rf),gnames = 'treebag','rf')
 ###Boosting models#####
 library(gbm)
 set.seed(123)
-kariki_gbm_fit <- gbm(Rain ~ .,data = training,n.trees = 10000,interaction.depth = 1,shrinkage = 0.001,distribution = "adaboost",cv.folds = 5,n.cores = NULL, verbose = FALSE)  
+system.time(kariki_gbm_fit <- gbm(Rain ~ .,data = training,n.trees = 10000,interaction.depth = 1,shrinkage = 0.001,distribution = "adaboost",cv.folds = 5,n.cores = NULL, verbose = FALSE))
 
+predictions_gbm<-predict(object=kariki_gbm_fit ,testing, type="link")
+
+table(predictions_gbm)
+confusionMatrix(predictions_gbm,testing$Rain)
 # With a a different distribution of bernouli or gaussian( square error) because rain is factor
 # For bernoulli, it had an error using trees
 kariki_gbm_fit_3 <- gbm(Rain ~ .,data = training,n.trees = 10000,interaction.depth = 1,shrinkage = 0.001,distribution = "gaussian",cv.folds = 5,n.cores = NULL, verbose = FALSE)  
-
-print(kariki_gbm_fit)
+summary(kariki_gbm_fit_3)
+print(kariki_gbm_fit_3)
 # MSE and RMSE
 sqrt(min(kariki_gbm_fit$cv.error))
 sqrt(min(kariki_gbm_fit_3$cv.error)) # had an mse of 0.03
@@ -121,20 +125,23 @@ gbm.perf(kariki_gbm_fit_3, method = "cv")
 
 # Tuning the model even further by reducing the no of trees abd the depth
 kariki_gbm_fit_2 <- gbm(Rain ~ .,data = training,n.trees = 5000,interaction.depth = 3,shrinkage = 0.1,distribution = "adaboost",cv.folds = 5,n.cores = NULL, verbose = FALSE)  
-
+sqrt(min(kariki_gbm_fit_2$cv.error))
 
 
 ########## Employing the GLM model on the data##### Accuracy of 83%
-trControl <- trainControl(method = "repeatedcv",  repeats = 5, number = 10, verboseIter = FALSE)
 predictor_rain <-c("High_Temp","Avg_Temp","Low_Temp","Dewpoint_High","Dewpoint_Avg","Dewpoint_low","Humidity_High","Humidity_Avg","Humidity_Low","Windspeed_High","Windspeed_Avg")
 prediction_formula <- as.formula(paste("Rain", paste(predictor_rain, collapse="+"), sep="~"))
-kariki_ML_models <- train(prediction_formula,data = training,method = "glm",family="binomial", trControl = trControl, metric = 'Accuracy',maxit = 100)
+system.time(kariki_ML_models <- train(prediction_formula,data = training,method = "glm",family="binomial", trControl = control, metric = 'Accuracy',maxit = 100))
 kariki_ML_models$results$Accuracy
 summary(kariki_ML_models) # From the summary of the model
 
 glm_responses <- predict(kariki_ML_models,testing,type = "raw")
 table(glm_responses)
 confusionMatrix(glm_responses,testing$Rain)
+glm_responses
+
+# Calculating the MSE and RMSE
+
 
 #########Using Roughsets#########################
 kariki_shuffled <- kariki_farm2[sample(nrow(kariki_farm2)),]
@@ -143,7 +150,7 @@ kariki_shuffled <- kariki_farm2[sample(nrow(kariki_farm2)),]
 kariki_DT <- SF.asDecisionTable(kariki_shuffled, decision.attr = 16, indx.nominal = c(1:13))
 
 kariki_DT_cutValues_2 <- D.discretization.RST(kariki_DT, type.method = "local.discernibility") # Method refused due to the date attribute hence used the unsupervised quantiles
-kariki_DT_cutValues <- D.discretization.RST(kariki_DT, type.method = "unsupervised.discernibility")# Testing both methods
+kariki_DT_cutValues <- D.discretization.RST(kariki_DT, type.method = "global.discernibility")# Testing both methods
 
 # Deducing the new discretized tables
 
