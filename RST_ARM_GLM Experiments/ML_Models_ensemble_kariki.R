@@ -11,25 +11,29 @@ library(dplyr)
 library(RoughSets)
 library(caretEnsemble)
 library(fastAdaboost)
-kariki_farm <- read.csv("D:/datasets/Kariki_Farm1.csv", stringsAsFactors = FALSE, fileEncoding="latin1")
+library(googlesheets4)
+
+kariki_farm <- read.csv("D:/K_farm.csv")
+
+k_farm <- read_sheet("https://docs.google.com/spreadsheets/d/1y29ch-sv9UXSZUX9mRxqx6NleN6-XO3ifXDqkDzeOiE/edit#gid=0")
 
 #Loading the datasets, preprocessing. The dataset has missing values, for now I just choose to reove all rows with missing values
 #Next I should choose an imputation method to see whether I can impute the missing values.
 
-(n<-nrow(kariki_farm)) # Checking number of rows in the data which is 1179
-c(as.character(kariki_farm$Date[1]), as.character(kariki_farm$Date[n])) # the date range from 2/3/2018 to 20/5/2021
-head(kariki_farm$Rain.Yes.No.)
-kariki_farm$Rain <- factor(kariki_farm$Rain) # Rain Yes/No to factor
-kariki_farm$Date <- as.Date(kariki_farm$Date, '%m/%d/%Y') # Date column to date
-str(kariki_farm)# When looking at the high and low numeric pressure, I had to convert them to numeric because they were being considered as being factors yet theyr weren't
-kariki_farm$High.Hpa. <- as.numeric(kariki_farm$High.Hpa.)
-kariki_farm$Low.Hpa. <- as.numeric(kariki_farm$Low.Hpa.)
-str(kariki_farm)
-view(kariki_farm)
-(cols_withNa <- apply(kariki_farm, 2, function(x) sum(is.na(x))))
+(n<-nrow(k_farm)) # Checking number of rows in the data which is 1179
+c(as.character(k_farm$Date[1]), as.character(k_farm$Date[n])) # the date range from 2/3/2018 to 20/5/2021
+head(k_farm$Rain.Yes.No.)
+k_farm$Rain <- factor(k_farm$Rain) # Rain Yes/No to factor
+k_farm$Date <- as.Date(k_farm$Date, '%m/%d/%Y') # Date column to date
+str(k_farm)# When looking at the high and low numeric pressure, I had to convert them to numeric because they were being considered as being factors yet theyr weren't
+k_farm$High.Hpa. <- as.numeric(k_farm$High.Hpa.)
+k_farm$Low.Hpa. <- as.numeric(k_farm$Low.Hpa.)
+str(k_farm)
+view(k_farm)
+(cols_withNa <- apply(k_farm, 2, function(x) sum(is.na(x))))
 
 ######## Picking only complete values, I create another data frame kariki_farm2################I removed missing value rows in the dataset
-kariki_farm2 <- kariki_farm[complete.cases(kariki_farm),]
+kariki_farm2 <- k_farm[complete.cases(k_farm),]
 str(kariki_farm2)
 (cols_withNa <- apply(kariki_farm2, 2, function(x) sum(is.na(x))))
 kariki_farm2$Date <- NULL # removing the date column
@@ -47,13 +51,13 @@ testing <- kariki_farm2[-kariki_train,]
 control <- trainControl(method="repeatedcv", number=10, repeats=3,
                         savePredictions=TRUE, classProbs=TRUE,preProc = c("center","scale"))
 
-#TreeBag
+###Tree-Bag
 seed <- 7
 metric <- "Accuracy"
 set.seed(seed)
-fit.treebag <- train(Rain~., data=training, method="treebag", metric=metric, trControl=control)
+system.time(fit.treebag <- train(Rain~., data=training, method="treebag", metric=metric, trControl=control))
 
-predictions_treebag<-predict(object=fit.treebag ,testing, type="raw")
+predictions_treebag<-predict(object=fit.treebag ,testing, type="prob")
 table(predictions_treebag)
 confusionMatrix(predictions_treebag,testing$Rain)
 

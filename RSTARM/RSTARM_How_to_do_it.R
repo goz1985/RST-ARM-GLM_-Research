@@ -6,6 +6,36 @@ library(RoughSets)
 data("RoughSetData")
 attr <- c(1,2,3)
 decision.table<-RoughSetData$hiring.dt
+hiring.data <- decision.table[sample(nrow(decision.table)),]
+
+# Splitting the dataset
+hdx <- round(0.7*nrow(hiring.data))
+hiring_training <- SF.asDecisionTable(hiring.data[1:hdx,],decision.attr = 5,indx.nominal = 5 )
+hiring_testing <- SF.asDecisionTable(hiring.data[(hdx+1): nrow(hiring.data),-ncol(hiring.data)])
+
+#' 1. Indiscernible computation
+#' 2. Rough Set computation
+#' 3. Boundary computation
+#' 4. Decision Rule formulation
+IND_1 <- BC.IND.relation.RST(hiring_training, feature.set = attr)
+RST_1 <- BC.LU.approximation.RST(hiring_training,IND_1)
+Region_1 <- BC.positive.reg.RST(hiring_training,RST_1)
+disc_1 <- BC.discernibility.mat.RST(hiring_training,range.object = NULL)
+decision_hiring_1 <- FS.all.reducts.computation(disc_1)
+new_h1 <- SF.applyDecTable(hiring_training,decision_hiring_1,control = list(indx.reduct = 1))
+new_h2 <- SF.applyDecTable(hiring_training,decision_hiring_1,control = list(indx.reduct = 2))
+
+# Rule generation using roughsets
+rules_1 <- RI.CN2Rules.RST(hiring_training, K = 5)
+rules_1 
+as.list(rules_1)
+pred.vals <- predict(rules_1, new_h1)
+pred.vals
+
+mean(pred.vals)
+
+#Indiscernibility Computation.
+
 IND <- BC.IND.relation.RST(decision.table, feature.set = attr)
 #Computation of upper and lower approximations to check with attributes affect the decision variable well and which dont.
 
@@ -24,7 +54,6 @@ new_hiring_table2 <- SF.applyDecTable(decision.table,decision_table_hiring,contr
 # Setting the epsilon value to rep an approximate threashold..Compute approximate reducts or not
 decision_hiring <- FS.greedy.heuristic.reduct.RST(decision.table,qualityF = X.entropy,epsilon = 0.9)
 Hiring_table <- SF.applyDecTable(decision.table,decision_hiring)
-
 
 
 
