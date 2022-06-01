@@ -14,9 +14,9 @@ library(ROCR)
 library(corrplot)
 library(dplyr)
 library(RoughSets)
-kariki_farm <- read.csv("D:/datasets/Kariki_Farm1.csv", stringsAsFactors = FALSE, fileEncoding="latin1")
+kariki_farm <- read.csv("E:/Datasets/Research datasets/Weather data/Kariki_Farm.csv")
 
-#Preprocessing
+# Preprocessing
 
 (n<-nrow(kariki_farm)) # Checking number of rows in the data which is 1179
 c(as.character(kariki_farm$Date[1]), as.character(kariki_farm$Date[n])) # the date range from 2/3/2018 to 20/5/2021
@@ -86,6 +86,12 @@ prediction_formula <- as.formula(paste("Rain", paste(predictor_rain, collapse="+
 kariki_ML_models <- train(prediction_formula,data = kariki_farm2,method = "glm",family="binomial", trControl = trControl, metric = 'Accuracy',maxit = 100)
 kariki_ML_models$results$Accuracy
 summary(kariki_ML_models) # From the summary of the model
+
+glm_responses <- predict(kariki_ML_models,testing,type = "raw")
+table(glm_responses)
+confusionMatrix(glm_responses,testing$Rain)
+
+
 
 # Used the adaboost and decision tree model..install the packages first for the adaboost model
 

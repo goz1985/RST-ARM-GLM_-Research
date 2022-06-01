@@ -10,7 +10,7 @@ library(corrplot)
 library(dplyr)
 library(RoughSets)
 # Data loading and preprocessing: Using Kariki farm and Kirogo site weather data.
-kariki_farm <- read.csv("D:/datasets/Kariki_Farm1.csv", stringsAsFactors = FALSE, fileEncoding="latin1")
+kariki_farm <- read.csv("E:/Datasets/Research datasets/Weather data/Kariki_Farm.csv")
 view(kariki_farm)
 (n<-nrow(kariki_farm)) # Checking number of rows in the data which is 1179
 c(as.character(kariki_farm$Date[1]), as.character(kariki_farm$Date[n])) # the date range from 2/3/2018 to 20/5/2021

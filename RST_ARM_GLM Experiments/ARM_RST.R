@@ -11,44 +11,30 @@ library(RoughSetKnowledgeReduction)
 
 #Loading the dataset and preprocessing it
 kariki_farm <- read.csv("E:/Datasets/Research datasets/Weather data/Kariki_Farm.csv")
+
 (n<-nrow(kariki_farm)) # Checking number of rows in the data which is 1179
 c(as.character(kariki_farm$Date[1]), as.character(kariki_farm$Date[n])) # the date range from 2/3/2018 to 20/5/2021
 head(kariki_farm$Rain.Yes.No.)
-kariki_farm$Rain <- factor(kariki_farm$Rain, labels = c("No","Yes"))# Rain Yes/No to factor
+kariki_farm$Rain <- factor(kariki_farm$Rain) # Rain Yes/No to factor
 kariki_farm$Date <- as.Date(kariki_farm$Date, '%m/%d/%Y') # Date column to date
-str(kariki_farm)# When looking at the high and low numeric pressure, I had to convert them to numeric because they were being considered as being factors yet theyr weren't
+str(kariki_farm)
 
-# Will have to check on the aspect of changing this to numeric from factor because it is giving weird values
+#When looking at the high and low numeric pressure, I had to convert them to numeric because they were being considered as being factors yet theyr weren't
+# Though omitting the conversion to numeric for high and low pressure for now..
+
 kariki_farm$High.Hpa. <- as.numeric(kariki_farm$High.Hpa.)
 kariki_farm$Low.Hpa. <- as.numeric(kariki_farm$Low.Hpa.)
 str(kariki_farm)
-view(kariki_farm)
-(cols_withNa <- apply(kariki_farm, 2, function(x) sum(is.na(x))))
 
-# Value imputation 
-summary(kariki_farm) # done to get the overlay of the data.
-# Creating a visual representation of the missing values
-library(VIM)
-Kariki_plot <- aggr(kariki_farm, col=c('navyblue','yellow'),numbers = TRUE, sortVars = TRUE, labels =names(kariki_farm),cex.axis=.7,gap=3, ylab=c("Missing data","Pattern"))
-
-#Imputing the missing values using a suitable method. Still referring 
-
-# Will use mice as the first method, then will try using HMsic (with the aregimpute()method)
-library(mice)
-library(missForest)
-library(Hmisc) #Giving an error message while loading
-
-# Imputation with MICE package
-kariki_imputed <- mice(kariki_farm, m =1, method = "pmm", maxit = 50, seed = 123)
-kariki_imputed_complete <- complete(kariki_imputed)
-
-#Impute with the HMISC package...This package not loading
-
-# If not imputing will be removing the rows with missing data
+# Removing the missing values without imputation.
 (cols_withNa <- apply(kariki_farm, 2, function(x) sum(is.na(x))))
 kariki_farm2 <- kariki_farm[complete.cases(kariki_farm),]
 str(kariki_farm2)
 (cols_withNa <- apply(kariki_farm2, 2, function(x) sum(is.na(x))))
+
+# Turning column to yes and no omitting it for now:
+
+kariki_farm2$Rain <- factor(kariki_farm2$Rain, labels = c("No","Yes"))# Rain Yes/No to factor
 kariki_farm2$Date <- NULL # removing the date column
 #Remove windspeed as it doesnt add any value to our research
 kariki_farm2$Windspeed_low <-NULL
@@ -66,24 +52,58 @@ library(dplyr)
 
 kariki_shuffled <- kariki_farm2[sample(nrow(kariki_farm2)),]
 kariki_DT <- SF.asDecisionTable(kariki_shuffled, decision.attr = 15, indx.nominal = c(1:14)) # Indx.nominal is picking conditional attributes
-####kariki_DT_cutValues <- D.discretization.RST(kariki_DT, type.method = "local.discernibility")## Saying all conditional attributes are nominal
 
-# Computing the indiscernibility relation
-IND <- BC.IND.relation.RST(kariki_DT)
+####################### Applying discretization it specifies all nominal####################
+kariki_DT_cutValues <- D.discretization.RST(kariki_DT, type.method = "local.discernibility")
+############################################################################################
 
+# Computing the indiscernibility relation, setting the feature set to be from attribute 1 to 14
+system.time(IND <- BC.IND.relation.RST(kariki_DT,feature.set =c(1:14)))
+rst_weather <- BC.LU.approximation.RST(kariki_DT,IND)
+print(rst_weather)
 # Compute Upper and Lower Approximations
-kariki_roughset <- BC.LU.approximation.RST(kariki_DT,IND)
+system.time(kariki_roughset <- BC.LU.approximation.RST(kariki_DT,IND))
 
 # Determining the regions
-kariki.regions <- BC.positive.reg.RST(kariki_DT,kariki_roughset)
+system.time(kariki.regions <- BC.positive.reg.RST(kariki_DT,kariki_roughset))
 
 # Discernibility matrix formulation
-kariki.matrix <- BC.discernibility.mat.RST(kariki_DT)
+system.time(kariki.matrix <- BC.discernibility.mat.RST(kariki_DT))
+
+
+low_app_no <- kariki_roughset$lower.approximation$`0`
+upp_app_no <- kariki_roughset$upper.approximation$`0`
+low_app_yes <- kariki_roughset$lower.approximation$`1`
+upp_app_yes <- kariki_roughset$upper.approximation$`1`
+
+
+
+boundary_app_yes <- setdiff(upp_app_yes,low_app_yes)
+boundary_app_no <- setdiff(upp_app_no,low_app_no)
+
+Uni_discourse <- c(1:nrow(kariki_DT))
+outer_region = setdiff(Uni_discourse,boundary_app_yes)
+
+
+print(outer_region)
+print(low_app_yes)
+print(roughset_2)
+
+
+#Reduct formulation using the all reduct computation and second using the greedy heuristic method
 
 # Reduct formulation using
-#' 1 Greedy heuristic
-GH_Kariki_reduct <- FS.greedy.heuristic.reduct.RST(kariki_DT,qualityF = X.entropy,epsilon = 0.0)
-GH_Table <- SF.applyDecTable(kariki_DT,GH_Kariki_reduct)
+
+# 1. All reduct formulation method
+
+system.time(kariki_weather <- FS.all.reducts.computation(kariki.matrix)) # A total of 483 reducts are generated which aint feasible.
+# From the above we see it aint an optimal method as it calculates all decision reduct even if they arent optimal
+
+#'2 Quick reduct method to generate reduct with High Temp, Dewpoint High, Precipitation amount, Rain as the main factors
+
+kariki.rst <- FS.feature.subset.computation(kariki_DT,method="greedy.heuristic.superreduct")
+dec.table_GHR <- SF.applyDecTable(kariki_DT, kariki.rst)                                         
+dec.table_GHR$Rain <- factor(dec.table_GHR$Rain, labels = c("No","Yes"))
 # With this method we get a reduct made up of 4 variables: High_temp, Dew_point, Precipitation amount and Rain
 
 # Analysis of the reduct using various Ml Models to compare with the other
@@ -100,9 +120,9 @@ library(corrplot)
 library(caretEnsemble)
 library(fastAdaboost)
 set.seed(123)
-GH_kariki_train <- createDataPartition(GH_Table$Rain, p =0.75, list = FALSE)
-GH_training <- GH_Table[GH_kariki_train,]
-GH_testing <- GH_Table[-GH_kariki_train,]
+GH_kariki_train <- createDataPartition(dec.table_GHR$Rain, p =0.75, list = FALSE)
+GH_training <- dec.table_GHR[GH_kariki_train,]
+GH_testing <- dec.table_GHR[-GH_kariki_train,]
 
 #### Ensemble methods#########
 GH_control <- trainControl(method="repeatedcv", number=10, repeats=3,
@@ -112,7 +132,7 @@ GH_control <- trainControl(method="repeatedcv", number=10, repeats=3,
 seed <- 123
 metric <- "Accuracy"
 set.seed(seed)
-fit.treebag_GH <- train(Rain~., data=GH_training, method="treebag", metric=metric, trControl=GH_control)
+system.time(fit.treebag_GH <- train(Rain~., data=GH_training, method="treebag", metric=metric, trControl=GH_control))
 
 # Running the predictions..the model on the reduct gives an accuracy of 89%
 predictions_treebag_GH<-predict(object=fit.treebag_GH ,GH_testing, type="raw")
@@ -121,11 +141,25 @@ confusionMatrix(predictions_treebag_GH,GH_testing$Rain)
 
 ### Running on the random forest model#### Was taking to much time to run
 set.seed(seed)
-fit.rf_GH <- train(Rain~., data=GH_training, method="rf", metric=metric, trControl=GH_control)
+system.time(fit.rf_GH <- train(Rain~., data=GH_training, method="rf", metric=metric, trControl=GH_control))
 
 predictions_rf_GH<-predict(object=fit.rf_GH ,GH_testing, type="raw")
 table(predictions_rf_GH)
 confusionMatrix(predictions_rf_GH,GH_testing$Rain)
+
+######Running the glm model### Accuracy 70%
+
+predictor_rain <-c("High_Temp","Dewpoint_High")
+prediction_formula <- as.formula(paste("Rain", paste(predictor_rain, collapse="+"), sep="~"))
+system.time(kariki_ML_models <- train(prediction_formula,data = GH_training,method = "glm",family="binomial", trControl = GH_control, metric = 'Accuracy',maxit = 100))
+kariki_ML_models$results$Accuracy
+summary(kariki_ML_models) # From the summary of the model
+
+glm_responses <- predict(kariki_ML_models,GH_testing,type = "raw")
+table(glm_responses)
+confusionMatrix(glm_responses,GH_testing$Rain)
+glm_responses
+
 
 
 
