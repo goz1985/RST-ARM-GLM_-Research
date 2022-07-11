@@ -11,6 +11,8 @@ library(RoughSetKnowledgeReduction)
 library(googlesheets4)
 library(arules)
 library(dplyr)
+library(RColorBrewer)
+library(arulesViz)
 
 #Loading the dataset and preprocessing it
 k_farm <- read_sheet("https://docs.google.com/spreadsheets/d/1y29ch-sv9UXSZUX9mRxqx6NleN6-XO3ifXDqkDzeOiE/edit#gid=0")
@@ -44,17 +46,17 @@ kariki_table <- SF.asDecisionTable(kariki_shuffled,decision.attr = 14, indx.nomi
 
 
 #####################Discretze the elements in the data sets for both training and testing################
-cut.values <- D.discretization.RST(kariki_train,type.method = "global.discernibility")  
+cut.values <- D.discretization.RST(kariki_table,type.method = "global.discernibility")  
 kariki_discretized <- SF.applyDecTable(kariki_table,cut.values)
 
 #######Feature selection using Greedy Heuristic Method#####################################################
-kariki.rst_GH <- FS.greedy.heuristic.reduct.RST(train_discretized,qualityF = X.entropy,epsilon = 0.0)
-GH_table_train <- SF.applyDecTable(kariki_discretized, kariki.rst_GH)
+kariki.rst_GH <- FS.greedy.heuristic.reduct.RST(kariki_discretized,qualityF = X.entropy,epsilon = 0.0)
+GH_table_train <- SF.applyDecTable(kariki_table, kariki.rst_GH)
 ###########################################################################################################
 
 ####Feature selection uisng Quick reduct method###########################################################
 kariki.rst_QR <- FS.feature.subset.computation(kariki_discretized,method="quickreduct.rst")
-QR_Table_Train<- SF.applyDecTable(kariki_discretized, kariki.rst_QR)
+QR_Table_Train<- SF.applyDecTable(kariki_table, kariki.rst_QR)
 ###########################################################################################################
 
 
@@ -112,6 +114,7 @@ library(corrplot)
 library(caretEnsemble)
 library(fastAdaboost)
 library(gbm)
+library(randomForest)
 set.seed(123)
 
 GH_table_train$Rain <- factor(GH_table_train$Rain, labels = c("No","Yes"))
@@ -124,7 +127,7 @@ GH_control <- trainControl(method="repeatedcv", number=10, repeats=3,
                         savePredictions=TRUE, classProbs=TRUE,preProc = c("center","scale"))
 
 ########Tree Bag Method, and running the testing data on the developed mode########################
-########the model on the reduct gives an accuracy of 81%############################################
+########the model on the reduct gives an accuracy of 83%############################################
 seed <- 123
 metric <- "Accuracy"
 set.seed(seed)
@@ -139,14 +142,14 @@ confusionMatrix(predictions_treebag_GH,GH_testing$Rain)
 set.seed(seed)
 system.time(fit.rf_GH <- randomForest(Rain~., data=GH_training,trControl=GH_control))
 print(fit.rf_GH)
-####The OOB(Out of Bag error) is 15.3% hence meaning that our models accuracy is around 84.7% on the training data####
+####The OOB(Out of Bag error) is 15.3% hence meaning that our models accuracy is around 85.6% on the training data####
 predictions_rf_GH<-predict(object=fit.rf_GH ,GH_testing, type="response")
 confusionMatrix(predictions_rf_GH,GH_testing$Rain)
 
 
 
-####################################Running the GLM model Accuracy 82% ########################################
-predictor_rain <-c("High_Temp","Dewpoint_High","Avg_Temp","Low_Temp","Dewpoint_low","Humidity_High","Humidity_Avg","Humidity_Low","Windspeed_High","Windspeed_Avg","High.Hpa.")
+####################################Running the GLM model Accuracy 84% ########################################
+predictor_rain <-c("High_Temp","Dewpoint_High","Avg_Temp","Low_Temp","Dewpoint_low","Humidity_High","Humidity_Low","Windspeed_High","Windspeed_Avg","High.Hpa.")
 prediction_formula <- as.formula(paste("Rain", paste(predictor_rain, collapse="+"), sep="~"))
 system.time(kariki_ML_models <- train(prediction_formula,data = GH_training,method = "glm",family="binomial", trControl = GH_control, metric = 'Accuracy',maxit = 100))
 kariki_ML_models$results$Accuracy
@@ -168,14 +171,25 @@ summary(kariki_gbm)
 
 predictions_gbm3<-predict(object=kariki_gbm ,GH_testing, type="link")
 table(predictions_gbm3)
-confusionMatrix(predictions_gbm3,GH_testing$Rain)
+confusionMatrix(predictions_gbm3,GH_testing$Rain)### Giving now an error
 # MSE and RMSE
-sqrt(min(kariki_gbm$cv.error)) # had an mse of 0.354436
+sqrt(min(kariki_gbm$cv.error)) # had an mse of 0.3390606
 
-#Plotting the loss function
+#Plotting the loss function, the best number of trees to use here was 9991
 gbm.perf(kariki_gbm, method = "cv")
 
 
+#' In my first run of using the Roughset reduct, I used used the discretized table to generate the reducts, the reduct had Avg_Humidity as one of its predictors
+#' which performed relatively well as they had the accuracy of
+#' Treebag model had 81%
+#' Random forest had 85%
+#' GLM had 82 % this is because the table had discretized cut values
+#' Now when using the set decision table(kariki_table) to generate the reduct, it had no Humidity_Avg as one of its predictors
+#' Treebag had 83 %
+#' Random forest had 86%
+#' GLM had 84%
+#' Boosting... will have to check it had an issue with generating the confusion matrix but the mse was 0.3390606
+#' Number of trees was 9991, for the reduct with discretized values it was 10000 trees with an mse of 0.35
 
 
 
@@ -183,23 +197,62 @@ gbm.perf(kariki_gbm, method = "cv")
 ####Applying the association rule mining method to get the decision rules
 
 
-#Convert DT to transactions, this helps in identifying how attributes/features are related to each other
-GH_Table_Frame <- as.data.frame(GH_table_train) # Coerce Decision table back to dataframe before coercing them to transactions
+#####Convert DT to transactions, this helps in identifying how attributes/features are related to each other
+GH_Table_Frame <- as.data.frame(GH_table_train) # Coerce Decision table back to data frame before coercing them to transactions
 kariki_trans_GH<-as(GH_Table_Frame,"transactions")
 
 itemLabels(kariki_trans_GH)
 image(kariki_trans_GH)
+head(kariki_trans_GH)
+
+######Checking the frequencies of the items in the transaction##############################
+itemFrequencyPlot(kariki_trans_GH,topN=20,type='absolute')
+arules::itemFrequencyPlot(kariki_trans_GH,topN=20,
+                          col = brewer.pal(8,'Pastel2'),
+                          main='Relative Item Frequency Plot',
+                          type="relative",
+                          ylab="Item Frequency(Relative)")
+
+#####In this plot we want to see the frequency of the items in the transaction, in this case the weather transaction from
+####' from our kariki_trans_GH reduct, we see Rain with the factor No has the highest item set while High_temp has the lowest
+
+# Checking for the most frequent itme based on the support
+kariki_freq_tem_set <- eclat (kariki_trans_GH, parameter = list(supp = 0.275, maxlen = 15))
+inspect(kariki_freq_tem_set)
 
 
-#Generating the rule using apriori method, will generate only two rules, need to fine tune in step 149 to get more rules
-kariki_rules <- apriori(kariki_trans_GH)
+##  Rule generation: I have to find an optimal support and confidence, use method 2 to generate good rules
 
+###############################METHOD 1#######################################################################
+###Generating the rule using Apriori method have to find an optimal support and confidence threshold to generate a significant number of rules
+# and also generate non-redundant rules.
+kariki_rules <- apriori(kariki_trans_GH, parameter = list(supp = 0.275, conf = 0.4, minlen = 2))
+
+kariki_rules_conf <- sort(kariki_rules, by = "confidence", decreasing = FALSE)
+inspect(head(kariki_rules_conf))
 #Inspecting rules with the highest confidence
 inspect(head(sort(kariki_rules, by='confidence'),5))
 
+####Turning the rules into a data-frame
 
-# Fine tuning the above function for deducing rules by tunning the support and confidence
-kariki_rules_2 <- apriori(data=kariki_trans_GH, parameter=list (supp=0.01,conf =0.1, minlen= 2, maxtime=10, target = "rules"))
+rules_df <- data.frame(lhs=labels(lhs(kariki_rules)),rhs=labels(rhs(kariki_rules)),kariki_rules@quality)
+rules_df
+
+
+
+##########################Method 2 rule generation#########################################################
+####Trying to fine tune the rule generation#####
+rules_2 <- apriori(kariki_trans_GH,parameter = list(minlen = 2,supp= 0.175, conf = 0.5),appearance = list(rhs= c("Rain=Yes", "Rain=No")))
+rules_table_2 <- data.frame(lhs=labels(lhs(rules_2)),rhs=labels(rhs(rules_2)),rules_2@quality)
+rules_table_2
+
+
+# Writing the rules to an excel file
+write.csv(rules_table_2,"D:\\Phd Research\\rules.csv", row.names = FALSE)
+
+## Method 3 rule generation#####
+###Fine tuning the above function for deducing rules by tunning the support and confidence
+kariki_rules_2 <- apriori(data=kariki_trans_GH, parameter=list (supp=0.01,conf =0.5, minlen= 2, maxtime=10, target = "rules"))
 summary(kariki_rules_2)
 # Need to get more quality rules from this reduct
 
