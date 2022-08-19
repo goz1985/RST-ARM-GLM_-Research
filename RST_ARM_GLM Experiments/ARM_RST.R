@@ -37,15 +37,48 @@ kariki_farm2$Rain <- factor(kariki_farm2$Rain, labels = c("No","Yes"))
 
 #### Removing the precipitation amount because it will influence the outcome variable#########
 kariki_farm2$Precipitation_amount<- NULL
-#############################################################################################################
+#########################################Splitting into training and testing sets, then carrying out a cross validation on the same####################################################################
 
+set.seed(123)
+kariki_train <- createDataPartition(kariki_farm2$Rain, p =0.75, list = FALSE)
+training <- kariki_farm2[kariki_train,]
+testing <- kariki_farm2[-kariki_train,]
+
+control <- trainControl(method="repeatedcv", number=10, repeats=3,
+                        savePredictions=TRUE, classProbs=TRUE,preProc = c("center","scale"))
+
+######Applying The GLM model on the data before using RST to get the interaction terms from the data set..84% accuracy##########
+
+predictor_rain <-c("High_Temp","Avg_Temp","Low_Temp","Dewpoint_High","Dewpoint_Avg","Dewpoint_low","Humidity_High","Humidity_Avg","Humidity_Low","Windspeed_High","Windspeed_Avg")
+prediction_formula <- as.formula(paste("Rain", paste(predictor_rain, collapse="+"), sep="~"))
+kariki_ML <- train(prediction_formula,data = training,method = "glm",family="binomial", trControl = control, metric = 'Accuracy',maxit = 100)
+kariki_ML$results$Accuracy
+summary(kariki_ML)
+
+glm_Org <- predict(kariki_ML,testing,type = "raw")
+table(glm_Org)
+confusionMatrix(glm_Org,testing$Rain)
+
+printCoefmat( coef( summary(kariki_ML) ) ) ## We see from the coefficient summary we see Low Temp, DewPoint_high,Windspeed_High and Windspee_Avg are important predictors (Evidence for the P-values)..
+##https://www.cell.com/trends/ecology-evolution/fulltext/S0169-5347(21)00284-6?_returnURL=https%3A%2F%2Flinkinghub.elsevier.com%2Fretrieve%2Fpii%2FS0169534721002846%3Fshowall%3Dtrue######
+
+
+
+
+
+
+
+
+
+
+``
 ########################## Rough-Sets Theory  ############################################################
 
 kariki_shuffled <- kariki_farm2[sample(nrow(kariki_farm2)),]
 kariki_table <- SF.asDecisionTable(kariki_shuffled,decision.attr = 14, indx.nominal = c(14))
 
 
-#####################Discretze the elements in the data sets for both training and testing################
+#####################Discretize the elements in the data sets for both training and testing################
 cut.values <- D.discretization.RST(kariki_table,type.method = "global.discernibility")  
 kariki_discretized <- SF.applyDecTable(kariki_table,cut.values)
 
@@ -251,7 +284,7 @@ rules_table_2
 write.csv(rules_table_2,"D:\\Phd Research\\rules.csv", row.names = FALSE)
 
 ## Method 3 rule generation#####
-###Fine tuning the above function for deducing rules by tunning the support and confidence
+###Fine tuning the above function for deducing rules by tuning the support and confidence
 kariki_rules_2 <- apriori(data=kariki_trans_GH, parameter=list (supp=0.01,conf =0.5, minlen= 2, maxtime=10, target = "rules"))
 summary(kariki_rules_2)
 # Need to get more quality rules from this reduct
@@ -261,13 +294,7 @@ summary(kariki_rules_2)
 rules_df <- data.frame(lhs=labels(lhs(kariki_rules_2)),rhs=labels(rhs(kariki_rules_2)),kariki_rules_2@quality)
 view(rules_df)
 
-# Trying to switch it up a bit..remove precipitation aspect
-GH_Table_Frame$Precipitation_amount<-NULL
 
-# BAsically the reduct couldnt formulate rules..
-
-#Generating the rule susing apriori method
-kariki_rules <- apriori(kariki_trans_GH)
 
 
 
