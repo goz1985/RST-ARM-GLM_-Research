@@ -28,6 +28,7 @@ kariki_farm2$Rain <- factor(kariki_farm2$Rain, labels = c("No","Yes"))
 
 #### Removing the precipitation amount because it will influence the outcome variable#########
 kariki_farm2$Precipitation_amount<- NULL
+##also due to issues with discretizing the element####
 #############################################################################################################
 
 
@@ -62,11 +63,11 @@ inspect(kfarm_freq_item_set)
 
 #########################Rule generation###################################################
 
-K_rules <- apriori(kfarm_trans,parameter = list(minlen = 2,supp= 0.175, conf = 0.5, maxlen=5),appearance = list(rhs= c("Rain=Yes", "Rain=No")))
+K_rules2 <- apriori(kfarm_trans,parameter = list(minlen = 2,supp= 0.1, conf = 0.8, maxlen=5),appearance = list(rhs= c("Rain=Yes", "Rain=No")))
 
 k_rules_table <- data.frame(lhs=labels(lhs(K_rules)),rhs=labels(rhs(K_rules)),K_rules@quality)
 
-###Pruning rules which are subset of other rules, originally there were 99 rules, after prunning they are now 38 rules#######
+###Pruning rules which are subset of other rules, originally there were 99 rules, after pruning they are now 38 rules#######
 subset.k_rules<-is.subset(K_rules)
 subset.k_rules
 
@@ -88,7 +89,10 @@ plot(rules.pruned, method="grouped")
 
 plot(rules.pruned, method="graph")
 
-######Putting the pruned rules in a dataframe##########################
+######Putting the pruned rules in a data frame##########################
 kariki_pruned_rules <- data.frame(lhs=labels(lhs(rules.pruned)),rhs=labels(rhs(rules.pruned)),rules.pruned@quality)
 
 write.csv(kariki_pruned_rules,"D:\\Phd Research\\pruned_rules.csv", row.names = FALSE)
+
+
+###Need to prine the rules further to get the rules with the highest confidence, lift and support, then convert them into a decision frame#####``
