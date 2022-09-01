@@ -1,7 +1,7 @@
 library(RoughSets)
 data("RoughSetData")
 attr <- c(1,2,3)
-IND <- BC.IND.relation.RST(decision.table, feature.set = attr.P)
+IND <- BC.IND.relation.RST(decision.table, feature.set = attr)
 decision.table<-RoughSetData$hiring.dt
 <<<<<<< HEAD
 hiring.data <- decision.table[sample(nrow(decision.table)),]
@@ -35,7 +35,7 @@ mean(pred.vals)
 #Indiscernibility Computation.
 
 =======
-IND <- BC.IND.relation.RST(decision.table, feature.set = attr.P)
+IND <- BC.IND.relation.RST(decision.table, feature.set = attr)
 >>>>>>> 5fde6696ade2ffe214ac4d06509120803ca9fec3
 IND <- BC.IND.relation.RST(decision.table, feature.set = attr)
 roughset <- BC.LU.approximation.RST(decision.table, IND)
@@ -65,13 +65,31 @@ install.packages("arules")
 >>>>>>> 5fde6696ade2ffe214ac4d06509120803ca9fec3
 library(arules)
 library(arules)
-AR_table <- as.data.frame(new_hiring_table )
+AR_table <- as.data.frame(new_hiring_table1 )
 View(AR_table)
 tdata <- as(AR_table,"transactions")
 View(tdata)
-rules <- apriori(tdata,parameter = list(minlen=2,supp=0.005,conf=0.8),appearance = list(rhs=c("Decision=Reject","Decision=Accept"),default="lhs",control=list(verbose=F)))
 rules <- apriori(tdata,parameter = list(minlen=2,supp=0.005,conf=0.8),appearance = list(rhs=c("Decision=Reject","Decision=Accept"),default="lhs"))
 inspect(rules)
 rules_df <- data.frame(lhs=labels(lhs(rules)),rhs=labels(rhs(rules)))
 View(rules_df)
 rules_df <- data.frame(lhs=labels(lhs(rules)),rhs=labels(rhs(rules)),rules@quality)
+
+####Creating a data_frame with the decision rules as binary values#####
+mce<- c(1,0,0,0,0,1,0,0,0)
+mba <- c(0,0,0,1,0,0,1,1,0)
+mcs <- c(0,0,0,0,1,0,0,0,1)
+exp_high <- c(0,1,0,0,0,0,1,0,1)
+exp_med <-c(0,0,0,1,1,0,0,0,0)
+exp_low <- c(0,0,1,0,0,1,0,1,0)
+Decision <- c(0,1,0,1,0,0,1,0,1)
+hire_table_2 <- data.frame(mce,mba,mcs,exp_high,exp_med,exp_low,Decision)
+
+## Running a glm model on the new binary dummy variables###
+ hire_glm <- glm(Decision~., data = hire_table_2,family = "binomial",maxit = 100)
+
+ library(MASS)
+ 
+ step_hire <- stepAIC(hire_glm,trace = TRUE,direction = "both")
+
+summary(step_hire)
