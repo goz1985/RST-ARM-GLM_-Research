@@ -17,8 +17,8 @@ library(arulesViz)
 #Loading the dataset and preprocessing it
 k_farm <- read_sheet("https://docs.google.com/spreadsheets/d/1y29ch-sv9UXSZUX9mRxqx6NleN6-XO3ifXDqkDzeOiE/edit#gid=0")
 
-(n<-nrow(k_farm)) # Checking number of rows in the data which is 1179
-c(as.character(k_farm$Date[1]), as.character(k_farm$Date[n])) # the date range from 2/3/2018 to 20/5/2021
+(n<-nrow(k_farm)) # Checking number of rows in the data which is 1619 observations with 17 varibales
+c(as.character(k_farm$Date[1]), as.character(k_farm$Date[n])) # the date range from 2/3/2018 to 18/8/2022
 head(k_farm$Rain)
 k_farm$Rain <- factor(k_farm$Rain) # Rain Yes/No to factor
 k_farm$Date <- as.Date(k_farm$Date, '%m/%d/%Y') # Date column to date
@@ -34,11 +34,13 @@ str(kariki_farm2)
 kariki_farm2$Date <- NULL # removing the date column
 kariki_farm2$Windspeed_low <- NULL # removing windsped low as it has no effect on the prediction 
 kariki_farm2$Rain <- factor(kariki_farm2$Rain, labels = c("No","Yes"))
-
+str(kariki_farm2)
 #### Removing the precipitation amount because it will influence the outcome variable#########
 kariki_farm2$Precipitation_amount<- NULL
 #########################################Splitting into training and testing sets, then carrying out a cross validation on the same####################################################################
-
+library(dplyr)
+library(caret)
+library(caretEnsemble)
 set.seed(123)
 kariki_train <- createDataPartition(kariki_farm2$Rain, p =0.75, list = FALSE)
 training <- kariki_farm2[kariki_train,]
@@ -62,6 +64,9 @@ confusionMatrix(glm_Org,testing$Rain)
 printCoefmat( coef( summary(kariki_ML) ) ) ## We see from the coefficient summary we see Low Temp, DewPoint_high,Windspeed_High and Windspee_Avg are important predictors (Evidence for the P-values)..
 ##https://www.cell.com/trends/ecology-evolution/fulltext/S0169-5347(21)00284-6?_returnURL=https%3A%2F%2Flinkinghub.elsevier.com%2Fretrieve%2Fpii%2FS0169534721002846%3Fshowall%3Dtrue######
 
+# Step wise regression to determine important prediction attributes
+kariki_glm <- glm(Rain~., data = training,family = "binomial",maxit = 100)
+step_kariki <- step(kariki_glm,direction = "both")
 
 
 
@@ -123,7 +128,7 @@ outer_region = setdiff(Uni_discourse,boundary_app_yes)
 
 
 print(outer_region)
-print(low_app_yes)
+print(upp_app_no)
 print(rst_weather)
 
 ########### Discernibility matrix and reduct formulation################################################################
@@ -265,11 +270,35 @@ kariki_rules_conf <- sort(kariki_rules, by = "confidence", decreasing = FALSE)
 inspect(head(kariki_rules_conf))
 #Inspecting rules with the highest confidence
 inspect(head(sort(kariki_rules, by='confidence'),5))
-
 ####Turning the rules into a data-frame
 
 rules_df <- data.frame(lhs=labels(lhs(kariki_rules)),rhs=labels(rhs(kariki_rules)),kariki_rules@quality)
 rules_df
+
+
+
+
+
+
+
+#####TUnned method to generate rules################################
+kariki_rules2 <- apriori(kariki_trans_GH,parameter = list(minlen = 2,supp= 0.1, conf = 0.5, maxlen=5),appearance = list(rhs= c("Rain=Yes", "Rain=No")))
+rules_df2 <- data.frame(lhs=labels(lhs(kariki_rules2)),rhs=labels(rhs(kariki_rules2)),kariki_rules2@quality)
+
+####### Prunning the rules to remove redundant rules#####
+subset.k_rules<-is.subset(kariki_rules2)
+subset.k_rules
+
+subset.k_rules[lower.tri(subset.k_rules, diag=T)] <- F
+subset.k_rules
+
+redundant<- apply(subset.k_rules,2,any)
+redundant
+
+rules.pruned <- kariki_rules2[!redundant]
+inspect(rules.pruned)
+
+
 
 
 
