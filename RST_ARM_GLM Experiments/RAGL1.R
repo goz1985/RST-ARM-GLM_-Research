@@ -15,6 +15,9 @@
 library(caret)
 library(caretEnsemble)
 library(googlesheets4)
+library(Metrics)
+library(sjlabelled)
+library(sjPlot)
 
 kariki_binary_values <- read.csv("D:/Binary_values.csv")
 View(kariki_binary_values)
@@ -28,6 +31,11 @@ kariki_original_model1<-glm(Rain~., data = kariki_farm2,family = "binomial",maxi
 summary(kariki_original_model1)
 anova(kariki_original_model1,test = 'LRT')
 #mae(kariki_farm2$Rain,predict(kariki_original_model1))
+
+plot_model(kariki_original_model1,vline.color = "green",sort.est = TRUE,show.values = TRUE)
+
+
+anova(kariki_original_model1,kariki_binary_model1)
 #### Fitting the GLM model and assessing it's viability ############
 kariki_binary_model1 <- glm(Rain~.,data = kariki_binary_values,family = "binomial",maxit = 100)
 summary(kariki_binary_model1)
@@ -40,4 +48,13 @@ rmse(kariki_binary_values$Rain,predict(kariki_binary_model1))
 #'When running the anova test we find that Low_Temp[ 14.5,15.9]; Dewpoint_High[ 15.8,22.4]; Dewpoint_low[ 8.4,10.9];and Humidity_High..90.99.
 #' are important predictors when it comes to Rain. High humidity has a high impact when it comes to Rain.
 #' We also note the AIC value has droped till 50
+
+c(extractAIC(kariki_original_model1), extractAIC(kariki_binary_model1)) # Shows the model with the binary values is prefered for use.
+plot_model(kariki_binary_model1,vline.color = "red",sort.est = TRUE,show.values = TRUE)
+
+
+
+
+
+
 
