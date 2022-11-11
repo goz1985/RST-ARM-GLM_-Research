@@ -20,4 +20,6 @@ Secondly from the deduced feature subset gotten by the Rough Set method in step 
 
 After deducing of the decision rules, a data frame containing the rules will be formulated and then Logit model for classification will be applied on to this rule data-frame. The rule data-frame will contain binary values representing the decision rules choosen in step two above.
 
-The decision rule data frame will be used on the logit model to model the decision variables based on the dataset used.
+The decision rule data frame will be used on the logit model to model the decision variables based on the dataset used. The model will be evaluated against a normal logistic regression model not employing the RAGL framework.
+
+THE RAGL ALGORITHM
