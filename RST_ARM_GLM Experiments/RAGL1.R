@@ -22,16 +22,23 @@ library(flexmix) #Calculate BIC values
 library(lmtest)
 library(effects)#Interpreting the coefficients in our GLM
 
-kariki_binary_values <- read.csv("D:/Binary_values.csv")
+kariki_binary_values <- read.csv("D:/Datasets/Kariki_binary_2_Nov.csv")
 View(kariki_binary_values)
+str(kariki_binary_values)
+kariki_binary_values$RAIN <- factor(kariki_binary_values$RAIN, labels = c("No","Yes"))
 
 kariki_binary_values$RULE.INSTANCES<-NULL
 
 #### Fitting the GLM model and assessing it's viability ############
-kariki_binary_model1 <- glm(Rain~.,data = kariki_binary_values,family = "binomial",maxit = 100)
+kariki_binary_model1 <- glm(RAIN~.,data = kariki_binary_values,family = "binomial",maxit = 100)
 summary(kariki_binary_model1)
-BIC(kariki)
+BIC(kariki_binary_model1)
 with(summary(kariki_binary_model1),1-deviance/null.deviance)####Simple method to get R-squared
+kariki_binary_model1$null.deviance
+kariki_binary_model1$df.residual
+kariki_binary_model1$df.null
+
+step_kariki_Binary <- step(kariki_binary_model1,direction = "both")
 
 #################################R-sqaured model#############################################
 RAGL<-function(kariki_binary_model1)
@@ -52,7 +59,7 @@ RAGL(kariki_binary_model1)
 ########################################################################################################
 
 predict(kariki_binary_model1,type = 'response')
-anova(kariki_binary_model1, test = 'LRT')
+anova(kariki_binary_model1, test = 'Chisq') #Anova test to see effect of variable on dependent target Rain
 mae(kariki_binary_values$Rain,predict(kariki_binary_model1))
 rmse(kariki_binary_values$Rain,predict(kariki_binary_model1))
 
@@ -68,6 +75,43 @@ lrtest(kariki_binary_model1)
 c(extractAIC(kariki_original_model1), extractAIC(kariki_binary_model1)) # Shows the model with the binary values is prefered for use.
 plot_model(kariki_binary_model1,vline.color = "red",sort.est = TRUE,show.values = TRUE,type = "pred")
 plot_model(kariki_binary_model1,vline.color = "red",sort.est = TRUE,show.values = TRUE)# This gives a better explanantion of the predictors to consider while looking into rain aspect.
+##########################################################################################################################################################################################
+
+
+
+
+#####Look at the website explaining the use of margins########################################
+library(margins)
+k_margins <- margins(kariki_binary_model1)
+summary(k_margins)
+plot(k_margins)
+##############################################################################################
+
+
+######################## Creating an explainer for fitting the binary values to a random forest model###########################
+library(DALEX)
+library(ranger)
+library(modelStudio)
+
+
+rf_Kariki_1 <- ranger(Rain ~., data = kariki_binary_values)
+kariki_explainer<-explain(rf_Kariki_1,data = kariki_binary_values,y=kariki_binary_values$Rain,label = "Random Forest")
+modelStudio(kariki_explainer)
+
+
+##############################################################################################################
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -125,15 +169,28 @@ kariki_original_model1<-glm(Rain~., data = training2,family = "binomial",maxit =
 
 summary(kariki_original_model1)
 resid(kariki_original_model1,type = 'pearson')
-anova(kariki_original_model1,test =c("LR"))
+anova(kariki_original_model1,test =c("Chisq"))
 
+k_margins_org <- margins(kariki_original_model1)
+summary(k_margins_org)
+plot(k_margins_org)
+
+
+
+LogLoss=function(actual, predicted)
+{
+  result=-1/length(actual)*(sum((actual*log(predicted)+(1-actual)*log(1-predicted))))
+  return(result)
+}
+
+LogLoss(testing2$Rain,kariki_org_predict)
 confint(kariki_original_model1)# gives 95% confidence interval of coefficients
 exp(confint(kariki_original_model1))# gives conf intervals of odds ratios
 exp(coef(kariki_original_model1))# gives odds ratios
 exp(cbind(OddRatiomodeln=coef(kariki_original_model1),confint(kariki_original_model1)))# odds & confidence interval at once
 
 
-predict(kariki_original_model1,data=testing2,type = 'terms')
+kariki_org_predict<-predict(kariki_original_model1,data=testing2,type = 'response')
 mae(testing2$Rain,predict(kariki_original_model1))
 rmse(testing2$Rain,predict(kariki_original_model1))
 
@@ -166,6 +223,9 @@ model2Rsq(kariki_original_model1) # R-Squared value for the GLM fit on data with
 with(summary(kariki_original_model1),1-deviance/null.deviance)### A simpler way of calculating R-squared
 
 
+
+
+
 ###########################Using the GLMNET package because the other glm packages are having fitting issues###################
 library(glmnet)
 model_glmnet<-train(Rain~.,data = training2,method='glmnet',trControl = control2)
@@ -175,3 +235,88 @@ predict(model_glmnet,testing2)
 predict(model_glmnet,testing2,offset = offset)
 print(model_glmnet)
 
+
+
+#########################Dec2023, after addding more data, the reduct changed. Now usng the new binary values############
+
+binary_values <- read.csv("D:/Datasets/Kariki_binary_2_Nov.csv")
+View(binary_values)
+str(binary_values)
+
+binary_values$RULE.INSTANCES<-NULL
+
+#### Fitting the GLM model and assessing it's viability ############
+kariki_binary_model2 <- glm(RAIN~.,data = binary_values,family = "binomial",maxit = 100)
+summary(kariki_binary_model2)
+BIC(kariki_binary_model2)
+with(summary(kariki_binary_model2),1-deviance/null.deviance)####Simple method to get R-squared
+kariki_binary_model2$null.deviance
+kariki_binary_model2$df.residual
+kariki_binary_model2$df.null
+
+#################################R-sqaured model#############################################
+RAGL_2<-function(kariki_binary_model2)
+{
+  dev = kariki_binary_model2$deviance
+  nullDev = kariki_binary_model2$null.deviance
+  modelN = length(kariki_binary_model2$fitted.values)
+  R.1 <- 1 - dev / nullDev
+  R.cs <- 1- exp(-(nullDev-dev)/modelN)
+  R.n <- R.cs /(1-(exp(-(nullDev / modelN))))
+  cat("Pseudo R-sq for logistic regression\n")
+  cat("Hosmer & Lemeshow R-sq ", round(R.1, 4),"\n")
+  cat("Cox and Snell R-sq ", round(R.cs, 4), "\n")
+  cat("Nagelkerke R-sq ", round(R.n, 4), "\n")
+}
+
+RAGL_2(kariki_binary_model2)
+tidy(kariki_binary_model2)
+########################################################################################################
+
+predict(kariki_binary_model2,type = 'response')
+anova(kariki_binary_model2, test = 'Chisq') #Anova test to see effect of variable on dependent target Rain
+mae(binary_values$Rain,predict(kariki_binary_model2))
+rmse(binary_values$Rain,predict(kariki_binary_model2))
+
+
+coef(kariki_binary_model2)
+exp(coef(kariki_binary_model2))
+lrtest(kariki_binary_model2)
+##
+#'When running the anova test we find that Low_Temp[ 14.5,15.9]; Dewpoint_High[ 15.8,22.4]; Dewpoint_low[ 8.4,10.9];and Humidity_High..90.99.
+#' are important predictors when it comes to Rain. High humidity has a high impact when it comes to Rain.
+#' We also note the AIC value has droped till 50
+
+c(extractAIC(kariki_original_model1), extractAIC(kariki_binary_model1)) # Shows the model with the binary values is prefered for use.
+plot_model(kariki_binary_model2,vline.color = "red",sort.est = TRUE,show.values = TRUE,type = "pred")
+plot_model(kariki_binary_model2,vline.color = "red",sort.est = TRUE,show.values = TRUE)# This gives a better explanantion of the predictors to consider while looking into rain aspect.
+##########################################################################################################################################################################################
+
+library(DALEX)
+library(ranger)
+library(modelStudio)
+
+
+rf_Kariki_2 <- ranger(RAIN ~., data = binary_values)
+kariki_explainer2<-explain(rf_Kariki_2,data = binary_values,y=binary_values$RAIN,label = "Random Forest")
+modelStudio(kariki_explainer2)
+
+rf_kariki_3 <-ranger(Rain~.,data = kariki_farm2)
+kariki_explainer2<-explain(rf_Kariki_2,data = binary_values,y=binary_values$RAIN,label = "Random Forest")
+
+
+##############################################################################################################
+
+glm_kariki_3<-glm(Rain~.,data = kariki_farm2,family = "binomial",maxit = 100)
+tidy(glm_kariki_3)
+library(broom)
+library(modelr)
+library(tidyverse)
+kariki_farm2 %>%
+  mutate(prob = ifelse(kariki_farm2$Rain == "Yes", 1, 0)) %>%
+  ggplot(aes(`Low(Hpa)`, prob)) +
+  geom_point(alpha = .15) +
+  geom_smooth(method = "glm", method.args = list(family = "binomial")) +
+  ggtitle("Logistic regression model fit") +
+  xlab("Low(Hpa)") +
+  ylab("Probability of Rain")
