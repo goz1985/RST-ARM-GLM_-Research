@@ -40,7 +40,9 @@ cancer_ctrl <- trainControl(method="repeatedcv", number=10, repeats=20,summaryFu
 
 model_cancer <- train(diagnosis ~., data = train, method = 'glm',preProcess = c('center', 'scale'),trControl = cancer_ctrl,metric = 'ROC')
 getTrainPerf(model_cancer)
-
+summary(model_cancer)
+AIC(model_cancer)
+BIC(model_cancer)
 ##### making predictions with the trained model####
 cancer_predict<-predict(model_cancer,test)
 confusionMatrix(cancer_predict,test$diagnosis)
@@ -68,22 +70,48 @@ Tree_predict<-predict(Tree_cancer,test)
 Tree_frame<-data.frame(Orig=test,Pred=Tree_predict)
 confusionMatrix(table(Tree_frame$Orig.diagnosis,Tree_frame$Pred))
 
-#_________________________________________Rulefit Method original PRE________________________________________________________
+#_________________________________________Rule fit Method original PRE________________________________________________________
 library(pre)
 system.time(cancer_pre<-pre(diagnosis~.,data = train,family = "binomial")) # Method takes abit of time to execute
-cancer_cvpre <-cvpre(cancer_pre) ## assessing prediction error of the fitted PRE through k-fold of 10
+cancer_cvpre <-cvpre(cancer_pre,k=3) ## assessing prediction error of the fitted PRE through k-fold of 10
 cancer_cvpre$accuracy
 #' for the above formula $SEL=0.031398628 which is the mean squared error on predicted values
 #' $AEL = 0.076432577 which is the mean absolute error
 #' $MCR = 0.04683841 which is the mis-classification error
 #' $table shows the mis-classification errors for the obserations B and M.
-
+interact(cancer_pre)
+#' With the interact functionality we are able to check the interactions between the variables and how they behave
+#' However the more the data, the more time it takes to compute these interactions.
 
 coef_cancer <- coef(cancer_pre)
 coef_cancer[1:6,]
 cancer_pre_predict <- predict(cancer_pre,newdata= test,)
 #____cancer_pre_frame <- data.frame(Orig=test,pred=cancer_pre_predict) # Check it later not working
 #____confusionMatrix(table(cancer_pre_frame$Orig.diagnosis,cancer_pre_frame$pred)) # check it later
+
+
+
+
+
+#_________________________________________________GAM___________________________________________________________________
+cancer_gam<-gam(diagnosis~.,data = train,family = binomial)
+summary(cancer_gam)
+AIC(cancer_gam)
+BIC(cancer_gam)
+plot(cancer_gam)
+
+anova(cancer_gam,test="Chisq")
+cancer_gam_predict <-predict(cancer_gam,test)
+
+cancer_gam_cutoff<-ifelse(cancer_gam_predict>=0.5,1,0)
+cancer_gam_confusion_matrix<-confusionMatrix(as.factor(test$diagnosis),as.factor(cancer_gam_cutoff),positive = '1')
+
+
+
+
+
+
+
 
 
 
