@@ -3,7 +3,7 @@ data("RoughSetData")
 attr <- c(1,2,3)
 IND <- BC.IND.relation.RST(decision.table, feature.set = attr)
 decision.table<-RoughSetData$hiring.dt
-<<<<<<< HEAD
+
 hiring.data <- decision.table[sample(nrow(decision.table)),]
 
 # Splitting the dataset
@@ -34,15 +34,15 @@ mean(pred.vals)
 
 #Indiscernibility Computation.
 
-=======
+
 IND <- BC.IND.relation.RST(decision.table, feature.set = attr)
->>>>>>> 5fde6696ade2ffe214ac4d06509120803ca9fec3
+
 IND <- BC.IND.relation.RST(decision.table, feature.set = attr)
 roughset <- BC.LU.approximation.RST(decision.table, IND)
 region.RST <- BC.positive.reg.RST(decision.table, roughset)
 disc.mat <- BC.discernibility.mat.RST(decision.table, range.object = NULL)
 decision_table_hiring <- FS.all.reducts.computation(disc.mat)
-<<<<<<< HEAD
+
 # From the above reduct computation we get two Reduct each having different attributes in the tables
 # Table one the attributes are : "Diploma", "Experience, "Decision"
 # Table two the attributes are : "Experience", "Reference", "Decision"
@@ -59,17 +59,17 @@ Hiring_table <- SF.applyDecTable(decision.table,decision_hiring)
 
 # Loading the association rule mining package for formulating the decision rules for the above dataset.
 
-=======
+
 new_hiring_table <- SF.applyDecTable(decision.table,decision_table_hiring,control = list(indx.reduct = 1))
 install.packages("arules")
->>>>>>> 5fde6696ade2ffe214ac4d06509120803ca9fec3
+
 library(arules)
 library(arules)
-AR_table <- as.data.frame(new_hiring_table1 )
+AR_table <- as.data.frame(new_h1 )
 View(AR_table)
 tdata <- as(AR_table,"transactions")
 View(tdata)
-rules <- apriori(tdata,parameter = list(minlen=2,supp=0.005,conf=0.8),appearance = list(rhs=c("Decision=Reject","Decision=Accept"),default="lhs"))
+rules <- apriori(tdata,parameter = list(minlen=2,supp=0.002,conf=0.8),appearance = list(rhs=c("Decision=Reject","Decision=Accept"),default="lhs"))
 inspect(rules)
 rules_df <- data.frame(lhs=labels(lhs(rules)),rhs=labels(rhs(rules)))
 View(rules_df)
@@ -93,3 +93,8 @@ hire_table_2 <- data.frame(mce,mba,mcs,exp_high,exp_med,exp_low,Decision)
  step_hire <- stepAIC(hire_glm,trace = TRUE,direction = "both")
 
 summary(step_hire)
+
+
+##### Checking Equivalence of decision attributes again using rough set #########
+hire_shuffled <- hire_table_2[sample(nrow(hire_table_2)),]
+hire_table <- SF.asDecisionTable(hire_shuffled,decision.attr = 7, indx.nominal = c(7))

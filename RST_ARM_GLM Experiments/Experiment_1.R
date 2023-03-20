@@ -23,7 +23,7 @@ kariki_farm$Low.Hpa. <- as.numeric(kariki_farm$Low.Hpa.)
 str(kariki_farm)
 view(kariki_farm)
 (cols_withNa <- apply(kariki_farm, 2, function(x) sum(is.na(x)))) # checking for columns with missing values we see that
-#' apart from Date, Low and High Hpa and Rain all the other columnns have missing values.
+#' apart from Date, Low and High Hpa and Rain all the other columns have missing values.
 
 ######## Picking only complete values, I create another data frame kariki_farm2################
 kariki_farm2 <- kariki_farm[complete.cases(kariki_farm),]

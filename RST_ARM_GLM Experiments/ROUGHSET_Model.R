@@ -10,7 +10,8 @@ library(RoughSets)
 library(RoughSetKnowledgeReduction)
 
 #Loading the dataset and preprocessing it
-kariki_farm <- read.csv("E:/Datasets/Research datasets/Weather data/Kariki_Farm.csv")
+k_farm <- read_sheet("https://docs.google.com/spreadsheets/d/1y29ch-sv9UXSZUX9mRxqx6NleN6-XO3ifXDqkDzeOiE/edit#gid=0")
+
 (n<-nrow(kariki_farm)) # Checking number of rows in the data which is 1179
 c(as.character(kariki_farm$Date[1]), as.character(kariki_farm$Date[n])) # the date range from 2/3/2018 to 20/5/2021
 head(kariki_farm$Rain.Yes.No.)
@@ -174,7 +175,7 @@ kariki_rules <- apriori(kariki_trans_GH)
 # Using the discernibility matrix kariki.matrix to formulate a reduct using all reduct computation
 
 reduct <- FS.all.reducts.computation(kariki.matrix) # Method very time consuming..check system time computation
-#The method henerates 477 reducts..generally not a feasible method as the research i proposed the greedy heuristic method.
+#The method generates 477 reducts..generally not a feasible method as the research i proposed the greedy heuristic method.
 
 
 

@@ -21,6 +21,7 @@ library(sjPlot)
 library(flexmix) #Calculate BIC values
 library(lmtest)
 library(effects)#Interpreting the coefficients in our GLM
+library(gtsummary)
 
 kariki_binary_values <- read.csv("D:/Datasets/Kariki_binary_2_Nov.csv")
 View(kariki_binary_values)
@@ -31,7 +32,9 @@ kariki_binary_values$RULE.INSTANCES<-NULL
 
 #### Fitting the GLM model and assessing it's viability ############
 kariki_binary_model1 <- glm(RAIN~.,data = kariki_binary_values,family = "binomial",maxit = 100)
-summary(kariki_binary_model1)
+tab_model(kariki_binary_model1) # Summary of regression model as a table
+tbl_regression(kariki_binary_model1,exponentiate = TRUE)
+summary(kariki_binary_model1)$coefficients
 BIC(kariki_binary_model1)
 with(summary(kariki_binary_model1),1-deviance/null.deviance)####Simple method to get R-squared
 kariki_binary_model1$null.deviance
@@ -59,7 +62,8 @@ RAGL(kariki_binary_model1)
 ########################################################################################################
 
 predict(kariki_binary_model1,type = 'response')
-anova(kariki_binary_model1, test = 'Chisq') #Anova test to see effect of variable on dependent target Rain
+anova(kariki_binary_model1, test = 'Chisq')
+  #Anova test to see effect of variable on dependent target Rain
 mae(kariki_binary_values$Rain,predict(kariki_binary_model1))
 rmse(kariki_binary_values$Rain,predict(kariki_binary_model1))
 
@@ -154,7 +158,7 @@ control2 <- trainControl(method="repeatedcv", number=10, repeats=3,
 
 model2<-train(Rain~.,data = training2,method = 'glm',trControl=control2,metric='Accuracy',maxit=100)
 getTrainPerf(model2)
-summary(model2)
+summary(model2)$coefficients
 kariki_predict<-predict(model2,testing2)
 confusionMatrix(kariki_predict,testing2$Rain)
 summary(model2)

@@ -15,10 +15,11 @@ library(googlesheets4)
 library(MLmetrics)
 library(party)
 library(e1071)
+library(arules)
+library(gbm)
 ####### kariki_farm <- read.csv("D:/K_farm.csv")################ Refused to execute due to coding issues in the excel file thus loading from google sheets
 
 k_farm <- read_sheet("https://docs.google.com/spreadsheets/d/1y29ch-sv9UXSZUX9mRxqx6NleN6-XO3ifXDqkDzeOiE/edit#gid=0")
-
 #Loading the datasets, preprocessing. The dataset has missing values, for now I just choose to reove all rows with missing values
 #Next I should choose an imputation method to see whether I can impute the missing values.
 
@@ -40,58 +41,38 @@ str(kariki_farm2)
 (cols_withNa <- apply(kariki_farm2, 2, function(x) sum(is.na(x))))
 kariki_farm2$Date <- NULL # removing the date column
 kariki_farm2$Windspeed_low <- NULL # removing windsped low as it has no effect on the prediction 
+
+#### Removing the precipitation amount because it will influence the outcome variable#########
+kariki_farm2$Precipitation_amount<- NULL
+##############################################################################################
+
 kariki_farm2$Rain <- factor(kariki_farm2$Rain, labels = c("No","Yes"))
 view(kariki_farm2)
-
+str(kariki_farm2)
 ############################Now applying several machine learning models on the data to see what it will output
 set.seed(123)
 kariki_train <- createDataPartition(kariki_farm2$Rain, p =0.75, list = FALSE)
 training <- kariki_farm2[kariki_train,]
 testing <- kariki_farm2[-kariki_train,]
 
-#Ensemble Models############### Tree Bag and RF (Random Forest)#### Bagging
+###############################Control for carrying out repeated runs on the model################################
 control <- trainControl(method="repeatedcv", number=10, repeats=3,
                         savePredictions=TRUE, classProbs=TRUE,preProc = c("center","scale"))
 
-###Tree-Bag##### Working in HP
-seed <- 7
-metric <- "Accuracy"
-set.seed(seed)
-system.time(fit.treebag <- train(Rain~., data=training, method="treebag", metric=metric, trControl=control))
+##################################################################################################################
 
-predictions_treebag<-predict(object=fit.treebag ,testing, type="prob")
-table(predictions_treebag)
-confusionMatrix(predictions_treebag,testing$Rain)
+
 
 ############## Random Forest model (Bagging model) ####################
+seed <- 123
+metric <- "Accuracy"
 set.seed(seed)
 system.time(fit.rf <- train(Rain~., data=training, method="rf", metric=metric, trControl=control))
 
 predictions_rf<-predict(object=fit.rf ,testing, type="raw")
 table(predictions_rf)
 confusionMatrix(predictions_rf,testing$Rain)
-
-
-#########summarizing results of the two models##############################################################
-############################################################################################################
-bagging_results <- resamples(list(treebag=fit.treebag, rf=fit.rf))
-summary(bagging_results)
-dotplot(bagging_results)
-
-#####Comparing the predictions using ROC curve..This part has an issue to show the ROC curve###############
-
-pred_bag <- list(prediction_raw_Tbag,prediction_raw_RF)
-pred_bag_predictions_treebag<-predict(object=fit.treebag ,testing, type="raw")
-prediction_raw_Tbag <-  prediction(as.numeric(pred_bag_predictions_treebag), testing$Rain)
-
-pred_bag_predictions_rf<-predict(object=fit.rf ,testing, type="raw")
-prediction_raw_RF <-  prediction(as.numeric(pred_bag_predictions_rf), testing$Rain)
-
-pred_bag <- data.frame(pred_bag)
-
-caTools::colAUC(prediction_raw_Tbag,prediction_raw_RF, testing$Rain, plotROC = TRUE)
-############################################################################################################
-############################################################################################################
+summary(fit.rf)
 
 ################### My Original method for boosting(gradient boosting)#######################################
 system.time(kariki_gbm_fit_3 <- gbm(Rain ~ .,data = training,n.trees = 10000,interaction.depth = 1,shrinkage = 0.001,distribution = "gaussian",cv.folds = 5,n.cores = NULL, verbose = FALSE))
@@ -101,19 +82,17 @@ plot.gbm(kariki_gbm_fit_3, 1, best.iter)
 print(kariki_gbm_fit_3)
 summary(kariki_gbm_fit_3)
 
-predictions_gbm3<-predict(object=kariki_gbm_fit_3 ,testing, type="response")
+predictions_gbm3<-predict(object=kariki_gbm_fit_3 ,testing, type="link")
 table(predictions_gbm3)
 confusionMatrix(kariki_gbm_fit_3)
 # MSE and RMSE
-sqrt(min(kariki_gbm_fit$cv.error))
 sqrt(min(kariki_gbm_fit_3$cv.error)) # had an mse of 0.03
 
 #Plotting the loss function
-gbm.perf(kariki_gbm_fit, method = "cv")
 gbm.perf(kariki_gbm_fit_3, method = "cv")
 
 # Tuning the model even further by reducing the no of trees abd the depth
-kariki_gbm_fit_2 <- gbm(Rain ~ .,data = training,n.trees = 5000,interaction.depth = 3,shrinkage = 0.1,distribution = "adaboost",cv.folds = 5,n.cores = NULL, verbose = FALSE)  
+kariki_gbm_fit_2 <- gbm(Rain ~ .,data = training,n.trees = 5000,interaction.depth = 3,shrinkage = 0.1,distribution = "gaussian",cv.folds = 5,n.cores = NULL, verbose = FALSE)  
 ###############################################################################################################################################
 
 
@@ -181,13 +160,16 @@ kariki_ML_models <- train(prediction_formula,data = training,method = "glm",fami
 kariki_ML_models$results$Accuracy
 summary(kariki_ML_models) # From the summary of the model
 
+kariki_ML_models$results$Kappa
+
+
 
 #########Using RoughSets First Experiment###############################################################################
 ## I used the discernibility matrix and the all reduct to get the reducts that can be generated from the dataset
 kariki_shuffled <- kariki_farm2[sample(nrow(kariki_farm2)),]
 # I set the indx.nominal between 1:15 and all the discetization methods but when set to between 1:13 it worked..
 # Error message is "All the conditional attributes are already nominal."
-kariki_DT <- SF.asDecisionTable(kariki_shuffled, decision.attr = 15, indx.nominal = c(1:14))
+kariki_DT <- SF.asDecisionTable(kariki_shuffled, decision.attr = 14, indx.nominal = c(1:13))
 
 # Computing the indiscernibility relation
 IND <- BC.IND.relation.RST(kariki_DT)
@@ -202,7 +184,7 @@ kariki.regions <- BC.positive.reg.RST(kariki_DT,kariki_roughset)
 system.time(kariki.matrix <- BC.discernibility.mat.RST(kariki_DT))
 
 ### Computation of all possible reducts that can be gotten from the discernibility matrix#####
-# Method generated 484 reducts in total and thus generated only 10 because I had 10 different reducts
+# Method generated 420 reducts in total and thus generated only 10 because I had 10 different reducts
 system.time(reduct_all <- FS.all.reducts.computation(kariki.matrix))
 dec_table_1 <- SF.applyDecTable(kariki_DT, reduct_all, control = list(indx.reduct = 1))
 dec_table_2 <- SF.applyDecTable(kariki_DT, reduct_all, control = list(indx.reduct = 2))
@@ -359,11 +341,55 @@ print(kariki_roughset)
 
 
 
+##################################### RST TRIAL#################################################################
+########################### without setting the indx.nominal to include attributes from feature 1 to 14##############################################################
+#### The discretization takes place in an efficient manner and it bins all the values together without having levels#########
+split <- round(0.70*nrow(kariki_shuffled))
+k_train <- SF.asDecisionTable(kariki_shuffled[1:split,],decision.attr = 15,indx.nominal = c(1:14) )
+k_test <- SF.asDecisionTable(kariki_shuffled[(split + 1):nrow(kariki_shuffled),-ncol(kariki_shuffled)])
+######Testing all discretization methods, all conditional attributes are nominal because of setting indx.nominal to be from columns 1:14#####
+k_cutValues <- D.discretization.RST(k_train, type.method = "local.discernibility")
+#########################################################################################################################
+
+####feature selection using quick reduct method##### Gives me a reduct with only 2 attributes precipitation amount and rain
+kariki.rst <- FS.feature.subset.computation(k_train,method="quickreduct.rst")
+kariki.tra <- SF.applyDecTable(k_train, kariki.rst)
+
+
+
+
+
+
+
 #########Using Rough sets Second Experiment###############################################################################
 kariki_shuffled <- kariki_farm2[sample(nrow(kariki_farm2)),]
 # I set the indx.nominal between 1:15 and all the discetization methods but when set to between 1:13 it worked..
 # Error message is "All the conditional attributes are already nominal."
 kariki_DT <- SF.asDecisionTable(kariki_shuffled, decision.attr = 15, indx.nominal = c(1:14))
-######Testing all discretization methods, all conditional attributes are nominal##################
-kariki_DT_cutValues <- D.discretization.RST(kariki_DT, type.method = "unsupervised.quantiles")
-##################################################################################################
+
+########Feature selection using the quick reduct method yields##################################################
+system.time(kariki.rst <- FS.feature.subset.computation(kariki_DT,method="quickreduct.rst"))
+kariki.tra <- SF.applyDecTable(kariki_DT, kariki.rst)
+################################################################################################################
+
+
+####feature selection using quick reduct method#################################################################  
+system.time(kariki_GH <- FS.greedy.heuristic.reduct.RST(kariki_DT, qualityF = X.entropy,epsilon = 0.0))
+GH_reduct <- SF.applyDecTable(kariki_DT, kariki_GH)
+################################## Produces same reduct as that of the quick reduct method#######################
+
+#### The greedy heuristic method is more faster than the quick reduct_ method
+
+############################## Rule generation 1384 rules#########################################################
+weather_rules <- RI.indiscernibilityBasedRules.RST(kariki_DT,kariki_GH)
+
+
+######## Rule generation with Association rule mining on the reduct############################################
+GH_reduct_Frame <- as.data.frame(GH_reduct)
+kariki_trans_GH<-as(GH_reduct_Frame,"transactions")
+itemLabels(kariki_trans_GH)
+image(kariki_trans_GH)
+kariki_rules <- apriori(kariki_trans_GH)
+
+
+
