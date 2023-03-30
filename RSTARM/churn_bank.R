@@ -30,7 +30,7 @@ churn$Gender<-factor(churn$Gender, labels = c("0","1"))
 churn$HasCrCard<-factor(churn$HasCrCard)
 churn$IsActiveMember<-factor(churn$IsActiveMember)
 churn$Exited<-factor(churn$Exited)
-churn$Geography<-factor(churn$Geography,labels = c("0","1","2"))
+churn$Geography<-factor(churn$Geography,labels = c("France","Spain","Germany"))
 
 
 
@@ -108,5 +108,78 @@ churn_tree_predict<-predict(churn_tree,churn_test,type='class')
 confusionMatrix(churn_tree_predict,churn_test$Exited,positive = '1')
 
 
-#_________________________________________________________Roughset Theory Feature detection_______________________________
+#_________________________________________________________Rough-set Theory Feature detection_______________________________
 
+###..................creating a decision table to be used for the roughset method...........................................
+
+churn_shuffled <- churn[sample(nrow(churn)),]
+churn_decision_table <- SF.asDecisionTable(churn_shuffled,decision.attr = 11, indx.nominal = c(3,8,9,11))
+
+#.....................Discretize the elements in the data sets for both training and testing................................
+
+churn.cut.values <- D.discretization.RST(churn_decision_table,type.method = "local.discernibility") ### used localbecause of mixed attributes
+churn_discretized <- SF.applyDecTable(churn_decision_table,churn.cut.values)
+
+
+#.......................Feature selection using Greedy Heuristic Method where it computes the approximate reduct............
+churn_GH_reduct <- FS.greedy.heuristic.reduct.RST(churn_discretized,qualityF = X.entropy,epsilon = 0.1)
+churn.Gh.Reduct <- SF.applyDecTable(churn_decision_table, churn_GH_reduct)
+
+write.csv(churn.Gh.Reduct,"D:\\Phd Research\\Experiment_2\\churn_GH.csv", row.names = FALSE)
+
+
+#................compare with the Quick reduct method.............................................................................
+churn_QR_reduct <- FS.quickreduct.RST(churn_discretized)
+churn.QR.reduct<-SF.applyDecTable(churn_decision_table,churn_QR_reduct)
+
+#' From the above two methods we see the attributes are all considered important by the rough set theory method of QR and Greedy heuristic
+#' Next will be to use the discernibility matrix and see whether it will give us a better reduce data
+
+churn.attr.p <- c(1,2,3,4,5,6,7,8,9,10,11)
+churn.ind <- BC.IND.relation.RST(churn_discretized,feature.set = churn.attr.p)# defining the indiscernibility relation
+system.time(churn_roughset <- BC.LU.approximation.RST(churn_discretized,churn.ind)) # defining the roughset
+churn.region.rst <- BC.positive.reg.RST(churn_decision_table,churn_roughset)
+system.time(churn.disc.mat<-BC.discernibility.mat.RST(churn_discretized,range.object = NULL))
+bank.churn.reducts<-FS.all.reducts.computation(churn.disc.mat)
+bank_churn_reduct<-SF.applyDecTable(churn_discretized,bank.churn.reducts)
+
+#__________________________Association Rule Mining we are applying on the greedy heuristic__________________________________________
+
+library(arules)
+library(tidyverse)
+library(arulesViz)
+library(knitr)
+library(gridExtra)
+library(lubridate)
+
+Churn_data.frame <- as.data.frame(churn.Gh.Reduct)
+churn.transaction<-as(Churn_data.frame,"transactions")
+
+itemLabels(churn.transaction)
+image(churn.transaction)
+itemFrequencyPlot(churn.transaction,topN=20,type='absolute')
+
+##.................Mining the rules using different confidence and support measures.......................................,..
+
+bank.rules <- apriori(churn.transaction,parameter = list(minlen = 2,supp= 0.01, conf = 0.8, maxlen=10),appearance = list(rhs= c("Exited=1", "Exited=0")))
+summary(bank.rules)
+rules_bank_df <- data.frame(lhs=labels(lhs(bank.rules)),rhs=labels(rhs(bank.rules)),bank.rules@quality)
+
+
+bank.rules.sorted<- sort(bank.rules, by = "confidence", decreasing = TRUE)
+
+## Prunning the rules of redundant or repeated rules#####
+
+bank.subset.rules<-is.subset(bank.rules.sorted)
+bank.subset.rules
+
+bank.subset.rules[lower.tri(bank.subset.rules, diag=T)] <- F
+bank.subset.rules
+
+redundant<- apply(bank.subset.rules,2,any)
+redundant
+
+bank.rules.pruned <- bank.rules.sorted[!redundant]
+arules::inspect(bank.rules.pruned)
+
+bank.rules.df <- data.frame(lhs=labels(lhs(bank.rules.pruned)),rhs=labels(rhs(bank.rules.pruned)),bank.rules.pruned@quality)

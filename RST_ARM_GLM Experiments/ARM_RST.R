@@ -351,7 +351,7 @@ inspect(kariki_freq_tem_set)
 ###############################METHOD 1#######################################################################
 ###Generating the rule using Apriori method have to find an optimal support and confidence threshold to generate a significant number of rules
 # and also generate non-redundant rules.
-kariki_rules <- apriori(kariki_trans_GH,parameter = list(minlen = 2,supp= 0.01, conf = 0.8, maxlen=15),appearance = list(rhs= c("Rain=Yes", "Rain=No")))
+kariki_rules <- apriori(kariki_trans_GH,parameter = list(minlen = 2,supp= 0.01, conf = 0.8, maxlen=2),appearance = list(rhs= c("Rain=Yes", "Rain=No")))
 
 kariki_rules <- sort(kariki_rules, by = "confidence", decreasing = FALSE)
 #Inspecting rules with the highest confidence

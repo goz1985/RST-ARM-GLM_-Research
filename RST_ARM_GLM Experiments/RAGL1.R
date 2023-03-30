@@ -103,12 +103,17 @@ kariki_explainer<-explain(rf_Kariki_1,data = kariki_binary_values,y=kariki_binar
 modelStudio(kariki_explainer)
 
 
+
 ##############################################################################################################
 
-
-
-
-
+#...............Modelling on naivebayes model...............................................................
+library(e1071)
+library(gmodels)
+model_naive_kariki<-naiveBayes(Rain ~., data = training2)
+print(model_naive_kariki)
+summary(model_naive_kariki)
+#...........comparing GLM performance against normal GLM and binary GLM and GAM............................
+print(compare_performance(kariki_binary_model1,kariki_original_model1,kariki_gam))
 
 
 
@@ -166,7 +171,14 @@ coef(model2)
 MAE(testing2$Rain,predict(model2,testing2))
 
 
+#...............................GAM model.............................................................
 
+library(gam)
+kariki_gam<-gam(Rain~., data = training2,family = "binomial")
+summary(kariki_gam)
+AIC(kariki_gam)
+BIC(kariki_gam)
+plot(kariki_gam)
 
 ##############################Using the GLM method in R instead of the caret Package####################
 kariki_original_model1<-glm(Rain~., data = training2,family = "binomial",maxit = 100)
@@ -203,6 +215,7 @@ rmse(testing2$Rain,predict(kariki_original_model1))
 plot_model(kariki_original_model1,vline.color = "green",sort.est = TRUE,show.values = TRUE,type = "pred")#Gives probability curves of the features against the target variable
 
 anova(kariki_original_model1,kariki_binary_model1)
+
 
 ##### Function to calculate R squared for the model#####
 model2Rsq<-function(kariki_original_model1)
@@ -257,6 +270,11 @@ with(summary(kariki_binary_model2),1-deviance/null.deviance)####Simple method to
 kariki_binary_model2$null.deviance
 kariki_binary_model2$df.residual
 kariki_binary_model2$df.null
+
+
+
+
+
 
 #################################R-sqaured model#############################################
 RAGL_2<-function(kariki_binary_model2)
