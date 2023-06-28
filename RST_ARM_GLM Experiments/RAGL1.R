@@ -98,9 +98,14 @@ library(ranger)
 library(modelStudio)
 
 
-rf_Kariki_1 <- ranger(Rain ~., data = kariki_binary_values)
+rf_Kariki_1 <- ranger(RAIN ~., data = kariki_binary_values)
 kariki_explainer<-explain(rf_Kariki_1,data = kariki_binary_values,y=kariki_binary_values$Rain,label = "Random Forest")
 modelStudio(kariki_explainer)
+
+
+
+modelStudio(kariki_binary_model1)
+
 
 
 
@@ -170,6 +175,13 @@ summary(model2)
 coef(model2)
 MAE(testing2$Rain,predict(model2,testing2))
 
+
+#..................Decision tree.......................................................
+library(rpart)
+library(rpart.plot)
+kariki_tree <-rpart(Rain~.,data = kariki_farm2,method="anova")
+summary(kariki_tree)
+kariki_tree_plot <-rpart.plot(kariki_tree)
 
 #...............................GAM model.............................................................
 
