@@ -1,6 +1,6 @@
 #.......................Experiment on the diabetes dataset......................
 library(RoughSets)
-library(RoughSetKnowledgeReduction)
+#library(RoughSetKnowledgeReduction)
 library(googlesheets4)
 library(arules)
 library(dplyr)
@@ -16,10 +16,10 @@ library(pROC)
 library(plyr)
 library(purrr)
 library(car)
-
+library(profvis)
 #-----Loading the dataset-------------------------------------------------------
 profvis({
-  diabetes_df<-read.csv("D:/Datasets/Datasets for testing on model/diabetes.csv")
+ diabetes_df<-read.csv("D:/Datasets/Datasets for testing on model/diabetes.csv")
   str(diabetes_df)
   
   diabetes_df$Outcome<-factor(diabetes_df$Outcome)
@@ -115,13 +115,20 @@ profvis({
   
   diabetes.rules.df <- data.frame(lhs=labels(lhs(diabetes.rules.pruned)),rhs=labels(rhs(diabetes.rules.pruned)),diabetes.rules.pruned@quality)
   
+  items <- unique(unlist(lapply(1:length(diabetes.rules.pruned), function(i) c(lhs = labels(lhs(diabetes.rules.pruned[i])), rhs = labels(rhs(diabetes.rules.pruned[i]))))))
   
-  library(arules)
-  library(arulesViz)
+  # Create a binary matrix
+  diabetes_binaryMatrix <- matrix(0, nrow = length(diabetes.rules.pruned), ncol = length(items), dimnames = list(NULL, items))
   
-  mat.diabetes<-rules2matrix(diabetes.rules.pruned, measure = "support", reorder = "measure")
-  mat.diabetes.df<-as.data.frame(mat.diabetes)
-  view(mat.diabetes)
+  # Fill matrix with 1s where items are in rules
+  for (i in seq_len(length(diabetes.rules.pruned))) {
+    rule_items <- c(lhs = labels(lhs(diabetes.rules.pruned[i])), rhs = labels(rhs(diabetes.rules.pruned[i])))
+    diabetes_binaryMatrix[i, rule_items] <- 1
+  }
+  
+  # Convert to data frame
+  diabetes_binary_values <- as.data.frame(diabetes_binaryMatrix)
+
   
   library(Metrics)
   library(sjlabelled)
@@ -147,7 +154,7 @@ profvis({
   
   #..................Compare model performance between the models.....................................
   library(performance)
-  print(compare_performance(diabetes_binary_model1,glm_diabetes,diabetes_gam))
-})
+  print(compare_performance(diabetes_binary_model1,glm_diabetes,diabetes_gam, diabetes_tree))
 
+})
 

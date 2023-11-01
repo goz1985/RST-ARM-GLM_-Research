@@ -1,6 +1,5 @@
 #__________________ Modelling the bank churn solution__________________________
 library(RoughSets)
-library(RoughSetKnowledgeReduction)
 library(googlesheets4)
 library(arules)
 library(dplyr)
@@ -113,7 +112,7 @@ confusionMatrix(churn_tree_predict,churn_test$Exited,positive = '1')
 ###..................creating a decision table to be used for the roughset method...........................................
 
 churn_shuffled <- churn[sample(nrow(churn)),]
-churn_decision_table <- SF.asDecisionTable(churn_shuffled,decision.attr = 11, indx.nominal = c(3,8,9,11))
+churn_decision_table <- SF.asDecisionTable(churn_shuffled,decision.attr = 11, indx.nominal = c(11))
 
 #.....................Discretize the elements in the data sets for both training and testing................................
 
@@ -122,7 +121,7 @@ churn_discretized <- SF.applyDecTable(churn_decision_table,churn.cut.values)
 
 
 #.......................Feature selection using Greedy Heuristic Method where it computes the approximate reduct............
-churn_GH_reduct <- FS.greedy.heuristic.reduct.RST(churn_discretized,qualityF = X.entropy,epsilon = 0.1)
+churn_GH_reduct <- FS.greedy.heuristic.reduct.RST(churn_discretized,qualityF = X.entropy,epsilon = 0.0)
 churn.Gh.Reduct <- SF.applyDecTable(churn_decision_table, churn_GH_reduct)
 
 write.csv(churn.Gh.Reduct,"D:\\Phd Research\\Experiment_2\\churn_GH.csv", row.names = FALSE)
