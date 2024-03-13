@@ -20,3 +20,4 @@ The main work in this research will be finding the optimal rules, generating bin
 
 The logit model will use the decision rule data frame to model the decision variables based on the data set used. These decision rules will be generated using the association rule mining method. Here, the main work will be tuning the model to get the optimal rules with high support and confidence that can be used for weather prediction. 
 
+The published paper for this work is found here: https://www.sciencedirect.com/science/article/abs/pii/S0957417423015944#:~:text=To%20counter%20this%20limitation%2C%20we,terms%20using%20association%20rule%20mining.
